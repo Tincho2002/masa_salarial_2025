@@ -66,8 +66,8 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-# --- URL del archivo en GitHub (RAW) - CORREGIDA ---
-FILE_URL = "https://raw.githubusercontent.com/Fedesass/streamlit/main/masa_salarial_2025.xlsx"
+# --- URL del archivo en GitHub (RAW) - CORREGIDA DEFINITIVAMENTE ---
+FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
 
 
 # --- Carga de datos con cache para optimizar rendimiento ---
@@ -130,12 +130,12 @@ if df.empty:
     
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
-selected_gerencia = st.sidebar.multoselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
-selected_nivel = st.sidebar.multoselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
-selected_clasificacion = st.sidebar.multoselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
-selected_relacion = st.sidebar.multoselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
+selected_gerencia = st.sidebar.multiselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
+selected_nivel = st.sidebar.multiselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
+selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
+selected_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
-selected_mes = st.sidebar.multoselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
+selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
 
 # --- Aplicar filtros ---
 df_filtered = df[
