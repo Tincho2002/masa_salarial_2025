@@ -68,7 +68,7 @@ h1, h2, h3 {
 
 # --- URL del archivo en GitHub (RAW) ---
 # IMPORTANTE: Reemplaza esta URL con la URL "Raw" de tu propio archivo en GitHub
-FILE_URL = "https://raw.githubusercontent.com/Maiben1971/masa_salarial_2025/main/masa_salarial_2025.xlsx"
+FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
 
 
 # --- Carga de datos con cache para optimizar rendimiento ---
@@ -190,4 +190,5 @@ else:
 
     st.subheader("Tabla de Datos Detallados")
     st.dataframe(df_filtered, use_container_width=True)
+
 
