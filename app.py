@@ -23,7 +23,7 @@ body, .stApp {
     background-color: var(--secondary-background-color);
     border-right: 1px solid #e0e0e0;
 }
-/* MODIFICACIÓN: Se aplica el estilo a todos los contenedores principales */
+/* Estilo para todos los contenedores principales */
 [data-testid="stMetric"], .stDataFrame, .st-emotion-cache-1n7693g, [data-testid="stExpander"], [data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
@@ -198,6 +198,8 @@ else:
         ).properties(
             height=350,
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
+        ).configure_view(
+            fill='transparent' # MODIFICACIÓN: Fondo transparente para respetar border-radius
         )
         st.altair_chart(line_chart, use_container_width=True)
     
@@ -211,8 +213,8 @@ else:
 
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
-    # MODIFICACIÓN: Ajustar proporción de columnas
-    col_table2, col_chart2 = st.columns([2, 3])
+    # MODIFICACIÓN: Se ajusta la proporción para evitar solapamiento
+    col_table2, col_chart2 = st.columns([1, 2])
     
     with col_chart2:
         gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
@@ -223,6 +225,8 @@ else:
         ).properties(
             height=420, 
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
+        ).configure_view(
+            fill='transparent' # MODIFICACIÓN: Fondo transparente para respetar border-radius
         )
         st.altair_chart(bar_chart, use_container_width=True)
 
@@ -230,7 +234,6 @@ else:
         gerencia_data_styled = gerencia_data.style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        # MODIFICACIÓN: Sincronizar altura con el gráfico
         st.dataframe(gerencia_data_styled, use_container_width=True, height=420)
 
     st.markdown("---")
@@ -248,6 +251,8 @@ else:
         ).properties(
             height=400,
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
+        ).configure_view(
+            fill='transparent' # MODIFICACIÓN: Fondo transparente para respetar border-radius
         )
         st.altair_chart(donut_chart, use_container_width=True)
 
@@ -307,6 +312,8 @@ if summary_df is not None:
         ).properties(
             height=400,
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
+        ).configure_view(
+            fill='transparent' # MODIFICACIÓN: Fondo transparente para respetar border-radius
         )
         st.altair_chart(summary_chart, use_container_width=True)
 
