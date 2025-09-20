@@ -31,13 +31,14 @@ body, .stApp {
     border-radius: 10px !important;
     padding: 20px;
 }
-/* SOLUCIÓN DEFINITIVA: Forzar el padding en los contenedores de los gráficos */
+/* SOLUCIÓN DEFINITIVA: Forzar padding y bordes redondeados en los gráficos */
 div[data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-radius: 10px !important;
-    padding: 1rem !important; /* Padding profesional forzado */
+    padding: 1.5rem !important; /* Padding profesional forzado */
+    overflow: hidden !important; /* Obliga al contenido a respetar los bordes redondeados */
 }
 h1, h2, h3 {
     color: var(--primary-color);
@@ -193,9 +194,7 @@ else:
                    ),
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=chart_height1,
-            # SOLUCIÓN: Añadir padding interno al gráfico
-            padding={'top': 20, 'left': 10, 'right': 10, 'bottom': 10}
+            height=chart_height1
         ).configure_view(
             fill='transparent'
         )
@@ -205,8 +204,8 @@ else:
         masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        # SOLUCIÓN: Igualar la altura de la tabla a la del gráfico
-        st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1)
+        # SOLUCIÓN: Ajustar altura de la tabla para balance visual
+        st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1 - 5)
 
     st.markdown("---")
 
@@ -226,9 +225,7 @@ else:
                    ),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=chart_height2,
-            # SOLUCIÓN: Añadir padding interno al gráfico
-            padding={'top': 20, 'left': 10, 'right': 10, 'bottom': 10}
+            height=chart_height2
         ).configure_view(
             fill='transparent'
         )
@@ -238,8 +235,8 @@ else:
         gerencia_data_styled = gerencia_data.style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        # SOLUCIÓN: Igualar la altura de la tabla a la del gráfico
-        st.dataframe(gerencia_data_styled, use_container_width=True, height=chart_height2)
+        # SOLUCIÓN: Ajustar altura de la tabla para balance visual
+        st.dataframe(gerencia_data_styled, use_container_width=True, height=chart_height2 - 5)
 
     st.markdown("---")
 
@@ -255,9 +252,7 @@ else:
             color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=chart_height3,
-            # SOLUCIÓN: Añadir padding interno al gráfico
-            padding={'top': 20, 'left': 10, 'right': 10, 'bottom': 10}
+            height=chart_height3
         ).configure_view(
             fill='transparent'
         )
@@ -269,8 +264,8 @@ else:
         ).style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        # SOLUCIÓN: Igualar la altura de la tabla a la del gráfico
-        st.dataframe(clasificacion_data_styled, use_container_width=True, height=chart_height3)
+        # SOLUCIÓN: Ajustar altura de la tabla para balance visual
+        st.dataframe(clasificacion_data_styled, use_container_width=True, height=chart_height3 - 5)
 
 
     st.markdown("---")
