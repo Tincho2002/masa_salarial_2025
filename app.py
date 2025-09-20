@@ -30,7 +30,7 @@ body, .stApp {
 }
 
 /* --- Estilo para Contenedores y Tarjetas --- */
-[data-testid="stMetric"], .stDataFrame, [data-testid="stExpander"], [data-testid="stFileUploader"] {
+[data-testid="stMetric"], .stDataFrame, [data-testid="stExpander"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     border-radius: 10px;
@@ -66,15 +66,19 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
+# --- URL del archivo en GitHub (RAW) ---
+# IMPORTANTE: Reemplaza esta URL con la URL "Raw" de tu propio archivo en GitHub
+FILE_URL = "https://raw.githubusercontent.com/Maiben1971/masa_salarial_2025/main/masa_salarial_2025.xlsx"
+
 
 # --- Carga de datos con cache para optimizar rendimiento ---
 @st.cache_data
-def load_data(uploaded_file):
+def load_data(url):
     """
-    Carga y preprocesa los datos desde un archivo Excel subido.
+    Carga y preprocesa los datos desde una URL de un archivo Excel.
     """
     try:
-        df = pd.read_excel(uploaded_file, sheet_name='masa_salarial', header=1)
+        df = pd.read_excel(url, sheet_name='masa_salarial', header=1)
         
         # Limpieza de nombres de columnas
         df.columns = df.columns.str.strip()
@@ -111,36 +115,29 @@ def load_data(uploaded_file):
 
         return df
     except Exception as e:
-        st.error(f"Ocurrió un error al cargar o procesar el archivo Excel: {e}")
+        st.error(f"Ocurrió un error al cargar o procesar el archivo desde la URL: {e}")
+        st.error(f"Asegúrate de que la URL es correcta y es la versión 'Raw' del archivo.")
         return pd.DataFrame()
 
-# --- Barra Lateral ---
-st.sidebar.header('Controles del Dashboard')
-
-# Cargador de Archivos
-uploaded_file = st.sidebar.file_uploader(
-    "Carga tu archivo Excel", 
-    type=['xlsx']
-)
-
-# El dashboard se ejecuta solo si se carga un archivo
-if uploaded_file is None:
-    st.info("Por favor, carga un archivo Excel para comenzar el análisis.")
-    st.stop()
+# --- Título del Dashboard ---
+st.title('📊 Dashboard de Masa Salarial 2025')
+st.markdown("Análisis interactivo de los costos de la mano de obra de la compañía.")
 
 # --- Cargar y procesar datos ---
-df = load_data(uploaded_file)
+with st.spinner('Cargando datos desde GitHub...'):
+    df = load_data(FILE_URL)
 
 if df.empty:
-    st.error("El DataFrame está vacío. Revisa el archivo o los mensajes de error anteriores.")
+    st.error("No se pudieron cargar los datos. Revisa los mensajes de error anteriores.")
     st.stop()
-
-# --- Filtros del Dashboard (ahora dependen de 'df') ---
-st.sidebar.header('Filtros')
+    
+# --- Barra Lateral de Filtros ---
+st.sidebar.header('Filtros del Dashboard')
 
 selected_gerencia = st.sidebar.multiselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
 selected_nivel = st.sidebar.multiselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
-selected_clasificacion = st.sidebar.multiseseleted_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
+selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
+selected_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
 
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
 selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
@@ -153,10 +150,6 @@ df_filtered = df[
     df['Relación'].isin(selected_relacion) &
     df['Mes'].isin(selected_mes)
 ]
-
-# --- Título del Dashboard ---
-st.title('📊 Dashboard de Masa Salarial 2025')
-st.markdown("Análisis interactivo de los costos de la mano de obra de la compañía.")
 
 # --- KPIs Principales ---
 total_masa_salarial = df_filtered['Total Mensual'].sum()
