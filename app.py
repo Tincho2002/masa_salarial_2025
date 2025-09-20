@@ -74,7 +74,6 @@ def load_data(url):
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
 
         # 5. PASO CRÍTICO: Eliminar cualquier fila donde la fecha no se pudo procesar.
-        # Esto purifica el DataFrame y previene errores internos de pandas.
         df.dropna(subset=['Período'], inplace=True)
         
         # 6. Ahora que las fechas son válidas, crear columnas de mes de forma segura.
@@ -90,9 +89,13 @@ def load_data(url):
         
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
+        # --- CORRECCIÓN FINAL PARA FILTROS LIMPIOS ---
         for col in ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Nro. de Legajo']:
             if col in df.columns:
-                df[col] = df[col].astype(str).fillna('No Asignado')
+                # Primero, rellenar valores nulos para evitar 'nan'
+                df[col].fillna('No Asignado', inplace=True)
+                # Luego, asegurarse de que todo sea string y quitar espacios extra
+                df[col] = df[col].astype(str).str.strip()
             else:
                 st.warning(f"Advertencia: La columna de filtro '{col}' no se encontró en los datos.")
                 df[col] = 'No Asignado'
