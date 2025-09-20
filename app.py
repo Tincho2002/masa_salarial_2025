@@ -52,26 +52,20 @@ def load_data(url):
     Carga y preprocesa los datos detallados de la hoja 'masa_salarial'.
     """
     try:
-        # --- MÉTODO DE LECTURA DEFINITIVO ---
-        # 1. Leer la hoja completa sin procesar encabezados
-        df_raw = pd.read_excel(url, sheet_name='masa_salarial', header=None, engine='openpyxl')
+        # --- MÉTODO DE LECTURA CORREGIDO Y DEFINITIVO ---
+        # 1. Leer el excel indicando que la cabecera es la PRIMERA fila (índice 0)
+        df = pd.read_excel(url, sheet_name='masa_salarial', header=0, engine='openpyxl')
         
-        # 2. Extraer y limpiar los nombres de la segunda fila (índice 1)
-        column_names = [str(name).strip() for name in df_raw.iloc[1].tolist()]
-        
-        # 3. Crear un nuevo DataFrame solo con las filas de datos (desde la tercera fila, índice 2)
-        df = df_raw.iloc[2:].copy()
-        
-        # 4. Asignar los nombres de columna correctos y reiniciar el índice
-        df.columns = column_names
-        df.reset_index(drop=True, inplace=True)
+        # 2. La primera columna está vacía y pandas la lee como 'Unnamed: 0'. La eliminamos.
+        if 'Unnamed: 0' in df.columns:
+            df = df.drop(columns=['Unnamed: 0'])
+            
+        # 3. Limpiar los nombres de las columnas para eliminar espacios invisibles
+        df.columns = [str(col).strip() for col in df.columns]
 
-        # 5. Eliminar la primera columna si está vacía (identificada como 'nan' o '')
-        if df.columns[0] in ['nan', '']:
-            df = df.iloc[:, 1:].copy()
-        
-        # 6. Eliminar cualquier fila que haya quedado completamente en blanco
+        # 4. Eliminar filas que estén completamente en blanco (si las hubiera)
         df.dropna(how='all', inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
         # --- PREPROCESAMIENTO ---
         if 'Período' not in df.columns:
