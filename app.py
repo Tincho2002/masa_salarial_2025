@@ -90,15 +90,18 @@ def load_data(url):
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         # --- CORRECCIÓN FINAL PARA FILTROS LIMPIOS ---
-        for col in ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Nro. de Legajo']:
+        # Se eliminan las filas que no tienen datos en las columnas de filtro principales
+        # para que no aparezcan opciones 'nan' o 'No Asignado' en los filtros.
+        key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
+        df.dropna(subset=key_filter_columns, inplace=True)
+
+        # Se procesan las columnas para asegurar que sean de tipo texto y no tengan espacios extra
+        for col in key_filter_columns:
             if col in df.columns:
-                # Primero, rellenar valores nulos para evitar 'nan'
-                df[col].fillna('No Asignado', inplace=True)
-                # Luego, asegurarse de que todo sea string y quitar espacios extra
                 df[col] = df[col].astype(str).str.strip()
-            else:
-                st.warning(f"Advertencia: La columna de filtro '{col}' no se encontró en los datos.")
-                df[col] = 'No Asignado'
+        
+        if 'Nro. de Legajo' in df.columns:
+             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype(str).str.strip()
         
         df.reset_index(drop=True, inplace=True)
         return df
