@@ -92,12 +92,12 @@ def load_data(url):
         
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
-        for col in ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']:
+        for col in ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Nro. de Legajo']:
             if col in df.columns:
                 df[col] = df[col].astype(str).fillna('No Asignado')
             else:
                 st.warning(f"Advertencia: La columna de filtro '{col}' no se encontró en los datos.")
-                df[col] = 'No Asignado' # Añadir columna vacía para evitar errores
+                df[col] = 'No Asignado'
         
         return df
     except Exception as e:
@@ -153,12 +153,13 @@ df_filtered = df[
 
 # --- KPIs Principales ---
 total_masa_salarial = df_filtered['Total Mensual'].sum()
-cantidad_empleados = df_filtered['Dotación'].sum()
+# Se corrige el cálculo de empleados para contar legajos únicos, es más robusto.
+cantidad_empleados = df_filtered['Nro. de Legajo'].nunique()
 costo_medio = total_masa_salarial / cantidad_empleados if cantidad_empleados > 0 else 0
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Masa Salarial Total", f"${total_masa_salarial:,.0f}")
-col2.metric("Cantidad de Empleados (Dotación)", f"{cantidad_empleados:,.0f}")
+col2.metric("Cantidad de Empleados", f"{cantidad_empleados}")
 col3.metric("Costo Medio por Empleado", f"${costo_medio:,.0f}")
     
 st.markdown("---")
