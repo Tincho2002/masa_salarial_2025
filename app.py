@@ -52,20 +52,26 @@ def load_data(url):
     Carga y preprocesa los datos detallados de la hoja 'masa_salarial'.
     """
     try:
-        # --- MÉTODO DE LECTURA DIRECTO Y ROBUSTO ---
-        # 1. Leer el Excel, especificando que la segunda fila (índice 1) es el encabezado.
-        df = pd.read_excel(url, sheet_name='masa_salarial', header=1, engine='openpyxl')
+        # --- MÉTODO DE LECTURA DEFINITIVO ---
+        # 1. Leer la hoja completa sin procesar encabezados
+        df_raw = pd.read_excel(url, sheet_name='masa_salarial', header=None, engine='openpyxl')
         
-        # 2. Eliminar la primera columna si no tiene nombre (comúnmente 'Unnamed: 0')
-        if 'Unnamed: 0' in df.columns:
-            df = df.drop(columns=['Unnamed: 0'])
-            
-        # 3. Eliminar filas que estén completamente vacías
-        df.dropna(how='all', inplace=True)
+        # 2. Extraer y limpiar los nombres de la segunda fila (índice 1)
+        column_names = [str(name).strip() for name in df_raw.iloc[1].tolist()]
+        
+        # 3. Crear un nuevo DataFrame solo con las filas de datos (desde la tercera fila, índice 2)
+        df = df_raw.iloc[2:].copy()
+        
+        # 4. Asignar los nombres de columna correctos y reiniciar el índice
+        df.columns = column_names
         df.reset_index(drop=True, inplace=True)
 
-        # 4. Limpieza final de los nombres de las columnas
-        df.columns = [str(col).strip() for col in df.columns]
+        # 5. Eliminar la primera columna si está vacía (identificada como 'nan' o '')
+        if df.columns[0] in ['nan', '']:
+            df = df.iloc[:, 1:].copy()
+        
+        # 6. Eliminar cualquier fila que haya quedado completamente en blanco
+        df.dropna(how='all', inplace=True)
 
         # --- PREPROCESAMIENTO ---
         if 'Período' not in df.columns:
@@ -87,7 +93,11 @@ def load_data(url):
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         for col in ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']:
-            df[col] = df[col].astype(str).fillna('No Asignado')
+            if col in df.columns:
+                df[col] = df[col].astype(str).fillna('No Asignado')
+            else:
+                st.warning(f"Advertencia: La columna de filtro '{col}' no se encontró en los datos.")
+                df[col] = 'No Asignado' # Añadir columna vacía para evitar errores
         
         return df
     except Exception as e:
@@ -125,12 +135,12 @@ st.markdown("Análisis interactivo de los costos de la mano de obra de la compa�
     
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
-selected_gerencia = st.sidebar.multoselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
-selected_nivel = st.sidebar.multoselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
-selected_clasificacion = st.sidebar.multoselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
-selected_relacion = st.sidebar.multoselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
+selected_gerencia = st.sidebar.multiselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
+selected_nivel = st.sidebar.multiselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
+selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
+selected_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
-selected_mes = st.sidebar.multoselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
+selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
 
 # --- Aplicar filtros ---
 df_filtered = df[
