@@ -123,7 +123,6 @@ st.markdown("Análisis interactivo de los costos de la mano de obra de la compa�
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
 
-# MODIFICACIÓN: Crear listas de opciones antes de pasarlas a los widgets para evitar errores.
 gerencia_options = sorted(df['Gerencia'].unique())
 selected_gerencia = st.sidebar.multiselect('Gerencia', options=gerencia_options, default=gerencia_options)
 
@@ -222,16 +221,14 @@ else:
         )
         st.altair_chart(donut_chart, use_container_width=True)
 
-    col_tabla1, col_tabla2 = st.columns(2)
-    with col_tabla1:
-        st.write("Datos por Gerencia")
+    # MODIFICACIÓN: Usar expanders para evitar la superposición de tablas.
+    with st.expander("Ver Datos por Gerencia"):
         gerencia_data_styled = gerencia_data.style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
         st.dataframe(gerencia_data_styled, use_container_width=True)
 
-    with col_tabla2:
-        st.write("Datos por Clasificación")
+    with st.expander("Ver Datos por Clasificación"):
         clasificacion_data_styled = clasificacion_data.rename(
             columns={'Clasificacion_Ministerio': 'Clasificación'}
         ).style.format({
@@ -239,12 +236,23 @@ else:
         }).hide(axis="index")
         st.dataframe(clasificacion_data_styled, use_container_width=True)
 
-
     st.subheader("Tabla de Datos Detallados")
-    df_filtered_styled = df_filtered.style.format({
-        "Total Mensual": "${:,.2f}",
-    })
-    st.dataframe(df_filtered_styled, use_container_width=True)
+    # MODIFICACIÓN: Usar column_config para evitar el error de StreamlitAPIException.
+    # Esto es más estable que usar styler para dataframes grandes.
+    st.dataframe(
+        df_filtered,
+        column_config={
+            "Total Mensual": st.column_config.NumberColumn(
+                "Total Mensual ($)",
+                format="$ %.2f",
+            ),
+            "Dotación": st.column_config.NumberColumn(
+                "Dotación",
+                format="%d"
+            )
+        },
+        use_container_width=True
+    )
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
