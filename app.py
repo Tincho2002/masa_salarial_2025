@@ -187,8 +187,8 @@ else:
                 tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
             ).properties(
                 height=350,
-                # CORRECCIÓN: Padding aplicado con el formato correcto (diccionario)
-                padding={'left': 20, 'right': 20, 'top': 20, 'bottom': 20}
+                # CORRECCIÓN DEFINITIVA: Padding como un solo número
+                padding=25
             ).configure_view(
                 fill='transparent'
             )
@@ -221,8 +221,8 @@ else:
                 tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
             ).properties(
                 height=fixed_height,
-                # CORRECCIÓN: Padding aplicado con el formato correcto (diccionario)
-                padding={'left': 20, 'right': 20, 'top': 20, 'bottom': 20}
+                # CORRECCIÓN DEFINITIVA: Padding como un solo número
+                padding=25
             ).configure_view(
                 fill='transparent'
             )
@@ -250,8 +250,8 @@ else:
                 tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
             ).properties(
                 height=350,
-                # CORRECCIÓN: Padding aplicado con el formato correcto (diccionario)
-                padding={'left': 20, 'right': 20, 'top': 20, 'bottom': 20}
+                # CORRECCIÓN DEFINITIVA: Padding como un solo número
+                padding=25
             ).configure_view(
                 fill='transparent'
             )
@@ -313,8 +313,8 @@ if summary_df is not None:
             ]
         ).properties(
             height=350,
-            # CORRECCIÓN: Padding aplicado con el formato correcto (diccionario)
-            padding={'left': 20, 'right': 20, 'top': 20, 'bottom': 20}
+            # CORRECCIÓN DEFINITIVA: Padding como un solo número
+            padding=25
         ).configure_view(
             fill='transparent'
         )
