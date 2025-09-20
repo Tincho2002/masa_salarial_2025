@@ -90,12 +90,9 @@ def load_data(url):
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         # --- CORRECCIÓN FINAL PARA FILTROS LIMPIOS ---
-        # Se eliminan las filas que no tienen datos en las columnas de filtro principales
-        # para que no aparezcan opciones 'nan' o 'No Asignado' en los filtros.
         key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
         df.dropna(subset=key_filter_columns, inplace=True)
 
-        # Se procesan las columnas para asegurar que sean de tipo texto y no tengan espacios extra
         for col in key_filter_columns:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
@@ -171,7 +168,6 @@ if not df_filtered.empty:
 costo_medio = total_masa_salarial / cantidad_empleados if cantidad_empleados > 0 else 0
 
 col1, col2, col3 = st.columns(3)
-# MODIFICACIÓN: Formato de KPIs a dos decimales
 col1.metric("Masa Salarial Total (Período)", f"${total_masa_salarial:,.2f}")
 col2.metric(f"Empleados ({latest_month_name})", f"{int(cantidad_empleados)}")
 col3.metric("Costo Medio por Empleado (Período)", f"${costo_medio:,.2f}")
@@ -185,33 +181,28 @@ else:
     st.subheader("Evolución Mensual de la Masa Salarial (Datos Detallados)")
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     
-    # MODIFICACIÓN: Layout en columnas para gráfico y tabla
-    col_evo1, col_evo2 = st.columns([2, 1]) # Gráfico más ancho que la tabla
+    col_evo1, col_evo2 = st.columns([2, 1]) 
 
     with col_evo1:
         line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
             x=alt.X('Mes:N', sort=meses_ordenados.tolist(), title='Mes'),
             y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-            # MODIFICACIÓN: Formato de tooltip a dos decimales
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(height=350)
         st.altair_chart(line_chart, use_container_width=True)
     
     with col_evo2:
         st.write("Datos de Evolución")
-        # MODIFICACIÓN: Mostrar tabla con formato
-        st.dataframe(
-            masa_mensual[['Mes', 'Total Mensual']],
-            column_config={
-                "Total Mensual": st.column_config.NumberColumn(
-                    label="Masa Salarial ($)",
-                    format="$ {:,.2f}"
-                )
-            },
-            use_container_width=True,
-            hide_index=True
-        )
+        # MODIFICACIÓN: Usar `styler.format` para formato de moneda correcto
+        masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(masa_mensual_styled, use_container_width=True)
 
+    st.markdown("---")
+
+    # MODIFICACIÓN: Separar gráficos y tablas en filas distintas para alinear
+    # --- Fila de Gráficos ---
     col_grafico1, col_grafico2 = st.columns(2)
     with col_grafico1:
         st.subheader("Masa Salarial por Gerencia")
@@ -219,23 +210,9 @@ else:
         bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None),
-            # MODIFICACIÓN: Formato de tooltip a dos decimales
             tooltip=[alt.Tooltip('Gerencia:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(height=400)
         st.altair_chart(bar_chart, use_container_width=True)
-        # MODIFICACIÓN: Añadir tabla correspondiente al gráfico
-        st.write("Datos por Gerencia")
-        st.dataframe(
-            gerencia_data,
-            column_config={
-                "Total Mensual": st.column_config.NumberColumn(
-                    label="Masa Salarial ($)",
-                    format="$ {:,.2f}"
-                )
-            },
-            use_container_width=True,
-            hide_index=True
-        )
 
     with col_grafico2:
         st.subheader("Distribución por Clasificación")
@@ -243,34 +220,38 @@ else:
         donut_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=80).encode(
             theta=alt.Theta("Total Mensual:Q"),
             color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
-            # MODIFICACIÓN: Formato de tooltip a dos decimales
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(height=400)
         st.altair_chart(donut_chart, use_container_width=True)
-        # MODIFICACIÓN: Añadir tabla correspondiente al gráfico
+
+    # --- Fila de Tablas ---
+    col_tabla1, col_tabla2 = st.columns(2)
+    with col_tabla1:
+        st.write("Datos por Gerencia")
+        gerencia_data_styled = gerencia_data.style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(gerencia_data_styled, use_container_width=True)
+
+    with col_tabla2:
         st.write("Datos por Clasificación")
-        st.dataframe(
-            clasificacion_data,
-            column_config={
-                "Clasificacion_Ministerio": "Clasificación",
-                "Total Mensual": st.column_config.NumberColumn(
-                    label="Masa Salarial ($)",
-                    format="$ {:,.2f}"
-                )
-            },
-            use_container_width=True,
-            hide_index=True
-        )
+        clasificacion_data_styled = clasificacion_data.rename(
+            columns={'Clasificacion_Ministerio': 'Clasificación'}
+        ).style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(clasificacion_data_styled, use_container_width=True)
 
 
     st.subheader("Tabla de Datos Detallados")
-    # MODIFICACIÓN: Aplicar formato de moneda a la tabla detallada
+    # MODIFICACIÓN: Corregir formato en 'column_config' para la tabla interactiva.
+    # Nota: `column_config` no soporta separadores de miles, pero esto corrige el error.
     st.dataframe(
         df_filtered, 
         column_config={
              "Total Mensual": st.column_config.NumberColumn(
                 label="Total Mensual ($)",
-                format="$ {:,.2f}"
+                format="$%.2f"
             )
         },
         use_container_width=True
@@ -281,14 +262,13 @@ if summary_df is not None:
     with st.expander("Ver Resumen de Evolución Anual (Datos de Control de la Hoja Excel)"):
         st.subheader("Tabla de Resumen Anual por Clasificación")
         
-        # MODIFICACIÓN: Crear config dinámicamente para formato de moneda
-        summary_column_config = {
-            col: st.column_config.NumberColumn(format="$ {:,.2f}")
+        # MODIFICACIÓN: Usar `styler.format` para un formato completo
+        summary_formatters = {
+            col: "${:,.2f}"
             for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
         }
-        st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
+        st.dataframe(summary_df.style.format(summary_formatters), use_container_width=True)
         
-        # Preparar datos para el gráfico de barras apiladas
         summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
             id_vars='Mes',
             var_name='Clasificacion',
@@ -303,10 +283,10 @@ if summary_df is not None:
             tooltip=[
                 alt.Tooltip('Mes:N'),
                 alt.Tooltip('Clasificacion:N'),
-                # MODIFICACIÓN: Formato de tooltip a dos decimales
                 alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')
             ]
         ).properties(
             height=400
         )
         st.altair_chart(summary_chart, use_container_width=True)
+
