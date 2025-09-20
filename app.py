@@ -52,15 +52,28 @@ def load_data(url):
     Carga y preprocesa los datos detallados de la hoja 'masa_salarial'.
     """
     try:
+        # --- MÉTODO DE LECTURA ROBUSTO ---
+        # 1. Leer el excel sin encabezado para tener control total
         df = pd.read_excel(url, sheet_name='masa_salarial', header=None, engine='openpyxl')
-        df.columns = df.iloc[1]
+        
+        # 2. Extraer los nombres de la segunda fila (índice 1) y limpiarlos INMEDIATAMENTE
+        # Se convierte cada nombre a string y se eliminan espacios/caracteres invisibles
+        column_names = [str(name).strip() for name in df.iloc[1].tolist()]
+        df.columns = column_names
+        
+        # 3. Eliminar las filas superiores que no son datos (título y fila de encabezado original)
         df = df.drop([0, 1]).reset_index(drop=True)
-        df.columns = [str(col).strip() for col in df.columns]
+
+        # 4. Eliminar la primera columna si se llama 'nan' (resultado de la limpieza)
         if 'nan' in df.columns:
             df = df.drop(columns=['nan'])
 
+        # --- PREPROCESAMIENTO ---
+        # 5. Verificación final de la columna 'Período'
         if 'Período' not in df.columns:
-            st.error("Error Crítico: La columna 'Período' no se encuentra en la hoja 'masa_salarial'.")
+            st.error("Error Crítico: La columna 'Período' no se encuentra después de la limpieza.")
+            st.info("Columnas encontradas por la aplicación:")
+            st.write(df.columns.tolist())
             return pd.DataFrame()
 
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
@@ -182,7 +195,6 @@ else:
     st.dataframe(df_filtered, use_container_width=True)
 
 # --- Sección de Resumen Anual ---
-# CORRECCIÓN: Se usa 'is not None' para evitar el error de ambigüedad del DataFrame
 if summary_df is not None:
     with st.expander("Ver Resumen de Evolución Anual (Datos de Control de la Hoja Excel)"):
         st.subheader("Tabla de Resumen Anual por Clasificación")
