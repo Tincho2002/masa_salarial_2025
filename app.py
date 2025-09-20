@@ -30,7 +30,7 @@ body, .stApp {
 }
 
 /* --- Estilo para Contenedores y Tarjetas --- */
-[data-testid="stMetric"], .stDataFrame, [data-testid="stExpander"] {
+[data-testid="stMetric"], .stDataFrame, [data-testid="stExpander"], [data-testid="stFileUploader"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     border-radius: 10px;
@@ -69,39 +69,34 @@ h1, h2, h3 {
 
 # --- Carga de datos con cache para optimizar rendimiento ---
 @st.cache_data
-def load_data(file_path):
+def load_data(uploaded_file):
     """
-    Carga y preprocesa los datos desde el archivo Excel.
+    Carga y preprocesa los datos desde un archivo Excel subido.
     """
     try:
-        df = pd.read_excel(file_path, sheet_name='masa_salarial', header=1) # Asumiendo que la fila 2 es el encabezado
+        df = pd.read_excel(uploaded_file, sheet_name='masa_salarial', header=1)
         
-        # Limpieza de nombres de columnas (quitar espacios, etc.)
+        # Limpieza de nombres de columnas
         df.columns = df.columns.str.strip()
         
-        # Eliminar la primera columna si no tiene nombre y es un índice no deseado
+        # Eliminar la primera columna si no tiene nombre
         if df.columns[0].startswith('Unnamed'):
             df = df.iloc[:, 1:]
 
-        # --- PREPROCESAMIENTO DE DATOS ---
-        # Convertir 'Período' a formato de fecha
+        # --- PREPROCESAMIENTO ---
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
-        
-        # Extraer el mes y el nombre del mes para el filtro
         df['Mes_Num'] = df['Período'].dt.month
         
-        # Mapeo de número de mes a nombre en español
         meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        # Seleccionar columnas relevantes y rellenar NaNs
         numeric_cols = ['Total Mensual', 'Dotación']
         for col in numeric_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
             else:
-                st.error(f"La columna '{col}' no se encuentra en el archivo. Por favor, verifica el Excel.")
+                st.error(f"La columna '{col}' no se encuentra en el archivo.")
                 return pd.DataFrame()
         
         string_cols = ['Gerencia', 'Nivel', 'Clasificación Ministerio de Hacienda', 'Relación']
@@ -109,68 +104,48 @@ def load_data(file_path):
              if col in df.columns:
                 df[col] = df[col].astype(str).fillna('No Asignado')
              else:
-                st.error(f"La columna '{col}' no se encuentra en el archivo. Por favor, verifica el Excel.")
+                st.error(f"La columna '{col}' no se encuentra en el archivo.")
                 return pd.DataFrame()
         
-        # Renombrar columnas para facilitar el acceso
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         return df
-    except FileNotFoundError:
-        st.error(f"Error: No se encontró el archivo en la ruta '{file_path}'. Asegúrate de que el archivo 'masa_salarial_2025.xlsx' esté en el mismo directorio que la app.")
-        return pd.DataFrame()
     except Exception as e:
         st.error(f"Ocurrió un error al cargar o procesar el archivo Excel: {e}")
         return pd.DataFrame()
 
-# --- Cargar los datos ---
-df = load_data('masa_salarial_2025.xlsx')
+# --- Barra Lateral ---
+st.sidebar.header('Controles del Dashboard')
 
-# Si el dataframe está vacío, detenemos la ejecución
-if df.empty:
+# Cargador de Archivos
+uploaded_file = st.sidebar.file_uploader(
+    "Carga tu archivo Excel", 
+    type=['xlsx']
+)
+
+# El dashboard se ejecuta solo si se carga un archivo
+if uploaded_file is None:
+    st.info("Por favor, carga un archivo Excel para comenzar el análisis.")
     st.stop()
-    
-# --- Barra Lateral de Filtros ---
-st.sidebar.header('Filtros del Dashboard')
 
-# Filtro por Gerencia
-selected_gerencia = st.sidebar.multiselect(
-    'Gerencia',
-    options=sorted(df['Gerencia'].unique()),
-    default=df['Gerencia'].unique()
-)
+# --- Cargar y procesar datos ---
+df = load_data(uploaded_file)
 
-# Filtro por Nivel
-selected_nivel = st.sidebar.multiselect(
-    'Nivel',
-    options=sorted(df['Nivel'].unique()),
-    default=df['Nivel'].unique()
-)
+if df.empty:
+    st.error("El DataFrame está vacío. Revisa el archivo o los mensajes de error anteriores.")
+    st.stop()
 
-# Filtro por Clasificación Ministerio
-selected_clasificacion = st.sidebar.multiselect(
-    'Clasificación Ministerio',
-    options=sorted(df['Clasificacion_Ministerio'].unique()),
-    default=df['Clasificacion_Ministerio'].unique()
-)
+# --- Filtros del Dashboard (ahora dependen de 'df') ---
+st.sidebar.header('Filtros')
 
-# Filtro por Relación
-selected_relacion = st.sidebar.multiselect(
-    'Relación',
-    options=sorted(df['Relación'].unique()),
-    default=df['Relación'].unique()
-)
+selected_gerencia = st.sidebar.multiselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
+selected_nivel = st.sidebar.multiselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
+selected_clasificacion = st.sidebar.multiseseleted_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
 
-# Filtro por Mes
-# Ordenar meses cronológicamente
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
-selected_mes = st.sidebar.multiselect(
-    'Mes',
-    options=meses_ordenados,
-    default=list(meses_ordenados)
-)
+selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
 
-# --- Aplicar filtros al DataFrame ---
+# --- Aplicar filtros ---
 df_filtered = df[
     df['Gerencia'].isin(selected_gerencia) &
     df['Nivel'].isin(selected_nivel) &
@@ -196,49 +171,30 @@ with col2:
 with col3:
     st.metric(label="Costo Medio por Empleado", value=f"${costo_medio:,.0f}")
     
-st.markdown("---") # Separador visual
+st.markdown("---")
 
 # --- Visualizaciones y Datos ---
-st.header("Detalle de Datos Filtrados")
+st.header("Análisis de Datos")
 
-# Mensaje si no hay datos
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    # Gráfico de Evolución Mensual (Ejemplo)
     st.subheader("Evolución de la Masa Salarial Mensual")
+    masa_mensual = df_filtered.groupby('Mes_Num').agg({'Total Mensual': 'sum'}).reset_index().sort_values('Mes_Num')
     
-    # Agrupar datos por mes para el gráfico
-    masa_mensual = df_filtered.groupby('Mes_Num').agg({'Total Mensual': 'sum'}).reset_index()
-    masa_mensual = masa_mensual.sort_values('Mes_Num')
-    
-    # Mapear de nuevo a nombres de mes para etiquetas correctas
-    meses_es_map = {1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 
-                    7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'}
-    masa_mensual['Mes'] = masa_mensual['Mes_Num'].map(meses_es_map)
-    
-    chart = alt.Chart(masa_mensual).mark_line(
-        point=True,
-        strokeWidth=3
-    ).encode(
-        x=alt.X('Mes_Num:O', title='Mes', axis=alt.Axis(labelExpr="datum.label")), # Ordena por número pero muestra nombre
+    chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
+        x=alt.X('Mes_Num:O', title='Mes', axis=alt.Axis(
+            values=list(range(1, 13)),
+            labelExpr="['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][datum.value - 1]"
+        )),
         y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0f')),
         tooltip=[
-            alt.Tooltip('Mes:N', title='Mes'),
+            alt.Tooltip('Mes_Num:N', title='Mes', format=''), # Formato se controla en el labelExpr
             alt.Tooltip('Total Mensual:Q', title='Masa Salarial', format='$,.0f')
         ]
-    ).properties(
-        height=300
-    ).configure_view(
-        stroke=None
-    ).configure_point(
-        size=100
-    ).transform_calculate(
-        label='"Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"[datum.Mes_Num-1]'
-    )
-
+    ).properties(height=350)
     st.altair_chart(chart, use_container_width=True)
 
-    # Tabla con datos filtrados
-    st.subheader("Tabla de Datos")
+    st.subheader("Tabla de Datos Detallados")
     st.dataframe(df_filtered, use_container_width=True)
+
