@@ -27,10 +27,11 @@ body, .stApp {
 [data-testid="stMetric"], .stDataFrame, .st-emotion-cache-1n7693g, [data-testid="stExpander"], [data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    padding: 20px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    overflow: hidden; /* Clave para que el contenido respete los bordes redondeados */
+    /* SOLUCIÓN FINAL CSS: Forzar los bordes redondeados y el recorte de contenido */
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    padding: 20px;
 }
 [data-testid="stMetricLabel"] {
     color: #555;
@@ -40,12 +41,6 @@ body, .stApp {
 h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
-}
-/* Centrar el contenido de las tablas */
-.stDataFrame div[data-testid="stHorizontalBlock"] {
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -215,7 +210,7 @@ else:
     st.subheader("Masa Salarial por Gerencia")
     
     with st.container():
-        # MODIFICACIÓN FINAL: Proporciones de columna [Tabla 40%, Gráfico 60%]
+        # Proporciones de columna [Tabla 40%, Gráfico 60%]
         col_table2, col_chart2 = st.columns([2, 3])
 
         gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
@@ -237,8 +232,8 @@ else:
                 x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Gerencia:N', sort='-x', title=None,
                         axis=alt.Axis(
-                            # Límite estricto a las etiquetas para evitar el desborde. El nombre completo se ve en el tooltip.
-                            labelLimit=120
+                            # Límite estricto a las etiquetas para evitar el desborde.
+                            labelLimit=110
                         )
                        ),
                 tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
