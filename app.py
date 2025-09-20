@@ -23,7 +23,7 @@ body, .stApp {
     background-color: var(--secondary-background-color);
     border-right: 1px solid #e0e0e0;
 }
-[data-testid="stMetric"], .stDataFrame, .st-emotion-cache-1n7693g, [data-testid="stExpander"] {
+[data-testid="stMetric"], .stDataFrame, .st-emotion-cache-1n7693g, [data-testid="stExpander"], [data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     border-radius: 10px;
@@ -44,6 +44,10 @@ h1, h2, h3 {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+/* MODIFICACIÓN: Aplicar border-radius al canvas del gráfico */
+[data-testid="stAltairChart"] canvas {
+    border-radius: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -200,7 +204,7 @@ else:
         st.altair_chart(line_chart, use_container_width=True)
     
     with col_table1:
-        st.markdown("<h5 style='text-align: center;'>Datos de Evolución</h5>", unsafe_allow_html=True)
+        # MODIFICACIÓN: Se eliminó el título de la tabla
         masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
@@ -225,7 +229,7 @@ else:
         st.altair_chart(bar_chart, use_container_width=True)
 
     with col_table2:
-        st.markdown("<h5 style='text-align: center;'>Datos por Gerencia</h5>", unsafe_allow_html=True)
+        # MODIFICACIÓN: Se eliminó el título de la tabla
         gerencia_data_styled = gerencia_data.style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
@@ -250,7 +254,7 @@ else:
         st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
-        st.markdown("<h5 style='text-align: center;'>Datos por Clasificación</h5>", unsafe_allow_html=True)
+        # MODIFICACIÓN: Se eliminó el título de la tabla
         clasificacion_data_styled = clasificacion_data.rename(
             columns={'Clasificacion_Ministerio': 'Clasificación'}
         ).style.format({
