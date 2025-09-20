@@ -31,13 +31,12 @@ body, .stApp {
     border-radius: 10px !important;
     padding: 20px;
 }
-/* SOLUCIÓN DEFINITIVA: Forzar padding y bordes redondeados en los gráficos */
+/* SOLUCIÓN DEFINITIVA: Estilo del contenedor del gráfico */
 div[data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-radius: 10px !important;
-    padding: 1.5rem !important; /* Padding profesional forzado */
     overflow: hidden !important; /* Obliga al contenido a respetar los bordes redondeados */
 }
 h1, h2, h3 {
@@ -194,7 +193,8 @@ else:
                    ),
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=chart_height1
+            height=chart_height1,
+            padding=25 # SOLUCIÓN: Padding interno del gráfico
         ).configure_view(
             fill='transparent'
         )
@@ -225,7 +225,8 @@ else:
                    ),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=chart_height2
+            height=chart_height2,
+            padding=25 # SOLUCIÓN: Padding interno del gráfico
         ).configure_view(
             fill='transparent'
         )
@@ -252,7 +253,8 @@ else:
             color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=chart_height3
+            height=chart_height3,
+            padding=25 # SOLUCIÓN: Padding interno del gráfico
         ).configure_view(
             fill='transparent'
         )
@@ -290,7 +292,7 @@ if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    st.subheader("Tabla de Resumen Anual por Clasificación")
+    # st.subheader("Tabla de Resumen Anual por Clasificación") # Título redundante
     summary_formatters = {
         col: "${:,.2f}"
         for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
@@ -303,7 +305,7 @@ if summary_df is not None:
         value_name='Masa Salarial'
     )
     
-    st.subheader("Gráfico de Resumen Anual")
+    # st.subheader("Gráfico de Resumen Anual") # Título redundante
     summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
         x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
         y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
@@ -314,7 +316,8 @@ if summary_df is not None:
             alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')
         ]
     ).properties(
-        height=350
+        height=350,
+        padding=25 # SOLUCIÓN: Padding interno del gráfico
     ).configure_view(
         fill='transparent'
     )
