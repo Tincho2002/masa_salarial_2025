@@ -1,4 +1,7 @@
+-- Librerías principales de la aplicación --
 streamlit
 pandas
 altair
+
+-- Dependencia para leer archivos Excel (.xlsx) --
 openpyxl
