@@ -23,7 +23,7 @@ body, .stApp {
     background-color: var(--secondary-background-color);
     border-right: 1px solid #e0e0e0;
 }
-[data-testid="stMetric"], .stDataFrame, .st-emotion-cache-1n7693g {
+[data-testid="stMetric"], .stDataFrame, .st-emotion-cache-1n7693g, [data-testid="stExpander"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     border-radius: 10px;
@@ -49,34 +49,18 @@ FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main
 @st.cache_data
 def load_data(url):
     """
-    Carga y preprocesa los datos desde una URL de un archivo Excel.
+    Carga y preprocesa los datos detallados de la hoja 'masa_salarial'.
     """
     try:
-        # --- MÉTODO DE LECTURA ROBUSTO ---
-        # 1. Leer el excel sin encabezado para tener control total
         df = pd.read_excel(url, sheet_name='masa_salarial', header=None, engine='openpyxl')
-        
-        # 2. Asignar explícitamente la segunda fila (índice 1) como los nombres de las columnas
         df.columns = df.iloc[1]
-        
-        # 3. Eliminar las filas superiores que no son datos (título y fila de encabezado original)
         df = df.drop([0, 1]).reset_index(drop=True)
-
-        # --- Limpieza de nombres de columnas y datos ---
-        # FORZAR a que todos los nombres de columna sean strings limpios.
-        # Esto soluciona problemas con tipos mixtos (ej, nan) y espacios ocultos.
         df.columns = [str(col).strip() for col in df.columns]
-
-        # La primera columna ahora es 'nan' (como string), la eliminamos.
         if 'nan' in df.columns:
             df = df.drop(columns=['nan'])
 
-        # --- PREPROCESAMIENTO ---
-        # Se verifica que la columna 'Período' exista antes de usarla
         if 'Período' not in df.columns:
-            st.error("Error Crítico: La columna 'Período' no se encuentra. Revisa el archivo Excel.")
-            st.info("Columnas encontradas por la aplicación (después de limpiar):")
-            st.write(df.columns.tolist())
+            st.error("Error Crítico: La columna 'Período' no se encuentra en la hoja 'masa_salarial'.")
             return pd.DataFrame()
 
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
@@ -87,31 +71,42 @@ def load_data(url):
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
         for col in ['Total Mensual', 'Dotación']:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-            else:
-                st.error(f"Error Crítico: La columna requerida '{col}' no se encuentra en el archivo.")
-                return pd.DataFrame()
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         for col in ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']:
-             if col in df.columns:
-                df[col] = df[col].astype(str).fillna('No Asignado')
-             else:
-                st.error(f"Error Crítico: La columna requerida '{col}' no se encuentra en el archivo.")
-                return pd.DataFrame()
+            df[col] = df[col].astype(str).fillna('No Asignado')
         
         return df
     except Exception as e:
-        st.error(f"Ocurrió un error al cargar o procesar el archivo: {e}")
+        st.error(f"Ocurrió un error al cargar la hoja 'masa_salarial': {e}")
         return pd.DataFrame()
+
+@st.cache_data
+def load_summary_data(url):
+    """
+    Carga los datos de resumen de la hoja 'Evolución Anual'.
+    """
+    try:
+        summary_df = pd.read_excel(url, sheet_name='Evolución Anual', header=3, index_col=0, engine='openpyxl')
+        summary_df.dropna(how='all', axis=0, inplace=True)
+        summary_df.dropna(how='all', axis=1, inplace=True)
+        if 'Total general' in summary_df.index:
+            summary_df = summary_df.drop('Total general')
+        summary_df.index.name = 'Mes'
+        return summary_df
+    except Exception as e:
+        st.warning(f"No se pudo cargar la hoja de resumen 'Evolución Anual': {e}")
+        return None
 
 # --- Carga de datos ---
 df = load_data(FILE_URL)
+summary_df = load_summary_data(FILE_URL)
+
 
 if df.empty:
-    st.error("La carga de datos ha fallado. Por favor, revisa el error anterior y verifica la estructura del archivo Excel.")
+    st.error("La carga de datos detallados ha fallado. El dashboard no puede continuar.")
     st.stop()
 
 # --- Título del Dashboard ---
@@ -152,7 +147,7 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    st.subheader("Evolución Mensual de la Masa Salarial")
+    st.subheader("Evolución Mensual de la Masa Salarial (Datos Detallados)")
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     
     line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
@@ -185,4 +180,33 @@ else:
 
     st.subheader("Tabla de Datos Detallados")
     st.dataframe(df_filtered, use_container_width=True)
+
+# --- Sección de Resumen Anual ---
+# CORRECCIÓN: Se usa 'is not None' para evitar el error de ambigüedad del DataFrame
+if summary_df is not None:
+    with st.expander("Ver Resumen de Evolución Anual (Datos de Control de la Hoja Excel)"):
+        st.subheader("Tabla de Resumen Anual por Clasificación")
+        st.dataframe(summary_df.style.format("{:,.0f}"))
+        
+        # Preparar datos para el gráfico de barras apiladas
+        summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
+            id_vars='Mes',
+            var_name='Clasificacion',
+            value_name='Masa Salarial'
+        )
+        
+        st.subheader("Gráfico de Resumen Anual")
+        summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
+            x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
+            y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+            color=alt.Color('Clasificacion:N', title='Clasificación'),
+            tooltip=[
+                alt.Tooltip('Mes:N'),
+                alt.Tooltip('Clasificacion:N'),
+                alt.Tooltip('sum(Masa Salarial):Q', format='$,.0f', title='Masa Salarial')
+            ]
+        ).properties(
+            height=400
+        )
+        st.altair_chart(summary_chart, use_container_width=True)
 
