@@ -52,44 +52,29 @@ def load_data(url):
     Carga y preprocesa los datos detallados de la hoja 'masa_salarial'.
     """
     try:
-        # --- MÉTODO DE LECTURA CORREGIDO Y DEFINITIVO ---
-        # 1. Leer el excel indicando que la cabecera es la PRIMERA fila (índice 0)
         df = pd.read_excel(url, sheet_name='masa_salarial', header=0, engine='openpyxl')
-        
-        # 2. Limpiar los nombres de las columnas para eliminar espacios invisibles
         df.columns = [str(col).strip() for col in df.columns]
 
-        # 3. La primera columna está vacía, la eliminamos si existe
         if 'Unnamed: 0' in df.columns:
             df = df.drop(columns=['Unnamed: 0'])
             
-        # --- PREPROCESAMIENTO ROBUSTO ---
         if 'Período' not in df.columns:
             st.error("Error Crítico: La columna 'Período' no se encuentra.")
-            st.info("Columnas encontradas:")
-            st.write(df.columns.tolist())
             return pd.DataFrame()
         
-        # 4. Convertir 'Período' a fecha. Las filas con fechas inválidas se marcarán como NaT.
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
-
-        # 5. PASO CRÍTICO: Eliminar cualquier fila donde la fecha no se pudo procesar.
         df.dropna(subset=['Período'], inplace=True)
-        
-        # 6. Ahora que las fechas son válidas, crear columnas de mes de forma segura.
         df['Mes_Num'] = df['Período'].dt.month.astype(int)
         
         meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        # 7. Procesar el resto de las columnas
         for col in ['Total Mensual', 'Dotación']:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
-        # --- CORRECCIÓN FINAL PARA FILTROS LIMPIOS ---
         key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
         df.dropna(subset=key_filter_columns, inplace=True)
 
@@ -137,12 +122,12 @@ st.markdown("Análisis interactivo de los costos de la mano de obra de la compa�
     
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
-selected_gerencia = st.sidebar.multiselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
-selected_nivel = st.sidebar.multiselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
-selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
-selected_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
+selected_gerencia = st.sidebar.multoselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
+selected_nivel = st.sidebar.multoselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
+selected_clasificacion = st.sidebar.multoselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
+selected_relacion = st.sidebar.multoselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
-selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
+selected_mes = st.sidebar.multoselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
 
 # --- Aplicar filtros ---
 df_filtered = df[
@@ -181,19 +166,19 @@ else:
     st.subheader("Evolución Mensual de la Masa Salarial (Datos Detallados)")
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     
-    col_evo1, col_evo2 = st.columns([2, 1]) 
-
-    with col_evo1:
-        line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
-            x=alt.X('Mes:N', sort=meses_ordenados.tolist(), title='Mes'),
-            y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-            tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=350)
-        st.altair_chart(line_chart, use_container_width=True)
+    # MODIFICACIÓN: Gráfico con padding
+    line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
+        x=alt.X('Mes:N', sort=meses_ordenados.tolist(), title='Mes'),
+        y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+        tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
+    ).properties(
+        height=350,
+        padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
+    )
+    st.altair_chart(line_chart, use_container_width=True)
     
-    with col_evo2:
-        st.write("Datos de Evolución")
-        # MODIFICACIÓN: Usar `styler.format` para formato de moneda correcto
+    # MODIFICACIÓN: Tabla debajo del gráfico para evitar desalineación
+    with st.expander("Ver Datos de Evolución Mensual"):
         masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
@@ -201,8 +186,7 @@ else:
 
     st.markdown("---")
 
-    # MODIFICACIÓN: Separar gráficos y tablas en filas distintas para alinear
-    # --- Fila de Gráficos ---
+    # MODIFICACIÓN: Fila de Gráficos con padding
     col_grafico1, col_grafico2 = st.columns(2)
     with col_grafico1:
         st.subheader("Masa Salarial por Gerencia")
@@ -211,7 +195,10 @@ else:
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None),
             tooltip=[alt.Tooltip('Gerencia:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=400)
+        ).properties(
+            height=400,
+            padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
+        )
         st.altair_chart(bar_chart, use_container_width=True)
 
     with col_grafico2:
@@ -221,10 +208,13 @@ else:
             theta=alt.Theta("Total Mensual:Q"),
             color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=400)
+        ).properties(
+            height=400,
+            padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
+        )
         st.altair_chart(donut_chart, use_container_width=True)
 
-    # --- Fila de Tablas ---
+    # MODIFICACIÓN: Fila de Tablas para evitar superposición
     col_tabla1, col_tabla2 = st.columns(2)
     with col_tabla1:
         st.write("Datos por Gerencia")
@@ -244,25 +234,19 @@ else:
 
 
     st.subheader("Tabla de Datos Detallados")
-    # MODIFICACIÓN: Corregir formato en 'column_config' para la tabla interactiva.
-    # Nota: `column_config` no soporta separadores de miles, pero esto corrige el error.
-    st.dataframe(
-        df_filtered, 
-        column_config={
-             "Total Mensual": st.column_config.NumberColumn(
-                label="Total Mensual ($)",
-                format="$%.2f"
-            )
-        },
-        use_container_width=True
-    )
+    # MODIFICACIÓN: Usar styler para formato de miles correcto. La tabla será estática.
+    df_filtered_styled = df_filtered.style.format({
+        "Total Mensual": "${:,.2f}",
+        # Puedes agregar formato a otras columnas numéricas si es necesario
+        # "Otra Columna": "{:,.2f}" 
+    })
+    st.dataframe(df_filtered_styled, use_container_width=True)
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
     with st.expander("Ver Resumen de Evolución Anual (Datos de Control de la Hoja Excel)"):
         st.subheader("Tabla de Resumen Anual por Clasificación")
         
-        # MODIFICACIÓN: Usar `styler.format` para un formato completo
         summary_formatters = {
             col: "${:,.2f}"
             for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
@@ -286,7 +270,8 @@ if summary_df is not None:
                 alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')
             ]
         ).properties(
-            height=400
+            height=400,
+            padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
         )
         st.altair_chart(summary_chart, use_container_width=True)
 
