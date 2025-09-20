@@ -153,13 +153,14 @@ df_filtered = df[
 
 # --- KPIs Principales ---
 total_masa_salarial = df_filtered['Total Mensual'].sum()
-# Se corrige el cálculo de empleados para contar legajos únicos, es más robusto.
-cantidad_empleados = df_filtered['Nro. de Legajo'].nunique()
+# --- CORRECCIÓN FINAL: Se vuelve al cálculo original y correcto sumando la columna 'Dotación' ---
+cantidad_empleados = df_filtered['Dotación'].sum()
 costo_medio = total_masa_salarial / cantidad_empleados if cantidad_empleados > 0 else 0
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Masa Salarial Total", f"${total_masa_salarial:,.0f}")
-col2.metric("Cantidad de Empleados", f"{cantidad_empleados}")
+# Se ajusta la etiqueta y el formato para que coincida con el objetivo
+col2.metric("Cantidad de Empleados (Dotación)", f"{int(cantidad_empleados)}")
 col3.metric("Costo Medio por Empleado", f"${costo_medio:,.0f}")
     
 st.markdown("---")
