@@ -63,15 +63,19 @@ def load_data(url):
         df = df.drop([0, 1]).reset_index(drop=True)
 
         # --- Limpieza de nombres de columnas y datos ---
-        df.columns = df.columns.str.strip()
-        if 'Unnamed: 0' in df.columns:
-            df = df.drop(columns=['Unnamed: 0'])
+        # FORZAR a que todos los nombres de columna sean strings limpios.
+        # Esto soluciona problemas con tipos mixtos (ej, nan) y espacios ocultos.
+        df.columns = [str(col).strip() for col in df.columns]
+
+        # La primera columna ahora es 'nan' (como string), la eliminamos.
+        if 'nan' in df.columns:
+            df = df.drop(columns=['nan'])
 
         # --- PREPROCESAMIENTO ---
         # Se verifica que la columna 'Período' exista antes de usarla
         if 'Período' not in df.columns:
             st.error("Error Crítico: La columna 'Período' no se encuentra. Revisa el archivo Excel.")
-            st.info("Columnas encontradas por la aplicación:")
+            st.info("Columnas encontradas por la aplicación (después de limpiar):")
             st.write(df.columns.tolist())
             return pd.DataFrame()
 
