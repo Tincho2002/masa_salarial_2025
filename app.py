@@ -66,8 +66,8 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-# --- URL del archivo en GitHub (RAW) ---
-FILE_URL = "https://raw.githubusercontent.com/Maiben1971/masa_salarial_2025/main/masa_salarial_2025.xlsx"
+# --- URL del archivo en GitHub (RAW) - CORREGIDA ---
+FILE_URL = "https://raw.githubusercontent.com/Fedesass/streamlit/main/masa_salarial_2025.xlsx"
 
 
 # --- Carga de datos con cache para optimizar rendimiento ---
@@ -77,18 +77,15 @@ def load_data(url):
     Carga y preprocesa los datos desde una URL de un archivo Excel.
     """
     try:
-        # CORRECCIÓN: Usar skiprows=1 es más robusto. Le dice a pandas que ignore
-        # la primera fila (que está vacía) y use la siguiente como encabezado.
-        df = pd.read_excel(url, sheet_name='masa_salarial', skiprows=1)
+        # Usar header=1 para indicar que la segunda fila contiene los encabezados.
+        df = pd.read_excel(url, sheet_name='masa_salarial', header=1)
         
         df.columns = df.columns.str.strip()
         
-        # Esta lógica es para manejar la primera columna vacía que a veces se genera desde Excel
         if df.columns[0].startswith('Unnamed'):
             df = df.iloc[:, 1:]
 
         # --- PREPROCESAMIENTO ---
-        # La línea de abajo, que antes daba error, ahora debería encontrar la columna 'Período'.
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
         df['Mes_Num'] = df['Período'].dt.month
         
@@ -133,12 +130,12 @@ if df.empty:
     
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
-selected_gerencia = st.sidebar.multiselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
-selected_nivel = st.sidebar.multiselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
-selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
-selected_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
+selected_gerencia = st.sidebar.multoselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
+selected_nivel = st.sidebar.multoselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
+selected_clasificacion = st.sidebar.multoselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
+selected_relacion = st.sidebar.multoselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
-selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
+selected_mes = st.sidebar.multoselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
 
 # --- Aplicar filtros ---
 df_filtered = df[
