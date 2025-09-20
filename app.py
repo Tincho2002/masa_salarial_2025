@@ -39,6 +39,12 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
+/* Centrar el contenido de las tablas */
+.stDataFrame div[data-testid="stHorizontalBlock"] {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -173,24 +179,28 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    st.subheader("Evolución Mensual de la Masa Salarial (Datos Detallados)")
-    masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
+    # --- Sección 1: Evolución Mensual ---
+    st.subheader("Evolución Mensual de la Masa Salarial")
+    col_chart1, col_table1 = st.columns([2, 1])
     
-    line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
-        x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
-        y=alt.Y('Total Mensual:Q',
-                title='Masa Salarial ($)',
-                axis=alt.Axis(format='$,.0s'),
-                scale=alt.Scale(domainMin=3000000000, domainMax=8000000000) # MODIFICACIÓN: Eje Y de 3G a 8G
-               ),
-        tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-    ).properties(
-        height=350,
-        padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
-    )
-    st.altair_chart(line_chart, use_container_width=True)
+    with col_chart1:
+        masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
+        line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
+            x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
+            y=alt.Y('Total Mensual:Q',
+                    title='Masa Salarial ($)',
+                    axis=alt.Axis(format='$,.0s'),
+                    scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)
+                   ),
+            tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
+        ).properties(
+            height=350,
+            padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
+        )
+        st.altair_chart(line_chart, use_container_width=True)
     
-    with st.expander("Ver Datos de Evolución Mensual"):
+    with col_table1:
+        st.markdown("<h5 style='text-align: center;'>Datos de Evolución</h5>", unsafe_allow_html=True)
         masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
@@ -198,9 +208,11 @@ else:
 
     st.markdown("---")
 
-    col_grafico1, col_grafico2 = st.columns(2)
-    with col_grafico1:
-        st.subheader("Masa Salarial por Gerencia")
+    # --- Sección 2: Masa Salarial por Gerencia ---
+    st.subheader("Masa Salarial por Gerencia")
+    col_table2, col_chart2 = st.columns([1, 2])
+    
+    with col_chart2:
         gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
         bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
@@ -212,8 +224,20 @@ else:
         )
         st.altair_chart(bar_chart, use_container_width=True)
 
-    with col_grafico2:
-        st.subheader("Distribución por Clasificación")
+    with col_table2:
+        st.markdown("<h5 style='text-align: center;'>Datos por Gerencia</h5>", unsafe_allow_html=True)
+        gerencia_data_styled = gerencia_data.style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(gerencia_data_styled, use_container_width=True, height=400)
+
+    st.markdown("---")
+
+    # --- Sección 3: Distribución por Clasificación ---
+    st.subheader("Distribución por Clasificación")
+    col_chart3, col_table3 = st.columns([2, 1])
+
+    with col_chart3:
         clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
         donut_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=80).encode(
             theta=alt.Theta("Total Mensual:Q"),
@@ -225,14 +249,8 @@ else:
         )
         st.altair_chart(donut_chart, use_container_width=True)
 
-    # MODIFICACIÓN: Usar expanders para evitar la superposición de tablas.
-    with st.expander("Ver Datos por Gerencia"):
-        gerencia_data_styled = gerencia_data.style.format({
-            "Total Mensual": "${:,.2f}"
-        }).hide(axis="index")
-        st.dataframe(gerencia_data_styled, use_container_width=True)
-
-    with st.expander("Ver Datos por Clasificación"):
+    with col_table3:
+        st.markdown("<h5 style='text-align: center;'>Datos por Clasificación</h5>", unsafe_allow_html=True)
         clasificacion_data_styled = clasificacion_data.rename(
             columns={'Clasificacion_Ministerio': 'Clasificación'}
         ).style.format({
@@ -240,9 +258,9 @@ else:
         }).hide(axis="index")
         st.dataframe(clasificacion_data_styled, use_container_width=True)
 
+
+    st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
-    # MODIFICACIÓN: Usar column_config para evitar el error de StreamlitAPIException.
-    # Esto es más estable que usar styler para dataframes grandes.
     st.dataframe(
         df_filtered,
         column_config={
@@ -290,6 +308,4 @@ if summary_df is not None:
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
         )
         st.altair_chart(summary_chart, use_container_width=True)
-
-
 
