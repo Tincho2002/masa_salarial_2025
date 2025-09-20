@@ -181,7 +181,7 @@ else:
         y=alt.Y('Total Mensual:Q',
                 title='Masa Salarial ($)',
                 axis=alt.Axis(format='$,.0s'),
-                scale=alt.Scale(domainMin=3000000000) # MODIFICACIÓN: El eje Y comienza en 3G
+                scale=alt.Scale(domainMin=3000000000, domainMax=8000000000) # MODIFICACIÓN: Eje Y de 3G a 8G
                ),
         tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
     ).properties(
@@ -290,5 +290,6 @@ if summary_df is not None:
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
         )
         st.altair_chart(summary_chart, use_container_width=True)
+
 
 
