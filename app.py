@@ -52,26 +52,21 @@ def load_data(url):
     Carga y preprocesa los datos detallados de la hoja 'masa_salarial'.
     """
     try:
-        # --- MÉTODO DE LECTURA DEFINITIVO ---
-        # 1. Leer el excel sin encabezado para tener control total
-        df_raw = pd.read_excel(url, sheet_name='masa_salarial', header=None, engine='openpyxl')
+        # --- MÉTODO DE LECTURA DIRECTO Y ROBUSTO ---
+        # 1. Leer el Excel, especificando que la segunda fila (índice 1) es el encabezado.
+        df = pd.read_excel(url, sheet_name='masa_salarial', header=1, engine='openpyxl')
         
-        # 2. Extraer los nombres de la segunda fila (índice 1) y limpiarlos
-        column_names = [str(name).strip() for name in df_raw.iloc[1].tolist()]
-        
-        # 3. Crear un nuevo DataFrame solo con los datos, que empiezan en la tercera fila (índice 2)
-        df = df_raw.iloc[2:].copy()
-        
-        # 4. Asignar los nombres de columna limpios al nuevo DataFrame
-        df.columns = column_names
-
-        # 5. Reiniciar el índice del DataFrame de datos
+        # 2. Eliminar la primera columna si no tiene nombre (comúnmente 'Unnamed: 0')
+        if 'Unnamed: 0' in df.columns:
+            df = df.drop(columns=['Unnamed: 0'])
+            
+        # 3. Eliminar filas que estén completamente vacías
+        df.dropna(how='all', inplace=True)
         df.reset_index(drop=True, inplace=True)
 
-        # 6. Eliminar la primera columna si está vacía (identificada como 'nan' o '')
-        if df.columns[0] in ['nan', '']:
-            df = df.iloc[:, 1:].copy()
-        
+        # 4. Limpieza final de los nombres de las columnas
+        df.columns = [str(col).strip() for col in df.columns]
+
         # --- PREPROCESAMIENTO ---
         if 'Período' not in df.columns:
             st.error("Error Crítico: La columna 'Período' no se encuentra.")
@@ -130,12 +125,12 @@ st.markdown("Análisis interactivo de los costos de la mano de obra de la compa�
     
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
-selected_gerencia = st.sidebar.multiselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
-selected_nivel = st.sidebar.multiselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
-selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
-selected_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
+selected_gerencia = st.sidebar.multoselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
+selected_nivel = st.sidebar.multoselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
+selected_clasificacion = st.sidebar.multoselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
+selected_relacion = st.sidebar.multoselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
-selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
+selected_mes = st.sidebar.multoselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
 
 # --- Aplicar filtros ---
 df_filtered = df[
