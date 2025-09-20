@@ -213,21 +213,27 @@ else:
 
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
-    
-    # MODIFICACIÓN: Se restaura el diseño de columnas con ajustes para evitar superposición.
     col_table2, col_chart2 = st.columns([2, 3])
 
+    # Se preparan los datos fuera de las columnas para usarlos en ambas
+    gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
+
+    # --- MODIFICACIÓN DEFINITIVA: Altura Dinámica ---
+    # Se calcula la altura necesaria basado en el número de gerencias
+    num_gerencias = len(gerencia_data)
+    # 35px por barra + 50px de espacio para ejes/padding. Con un mínimo y máximo.
+    dynamic_height = max(400, min(800, num_gerencias * 35 + 50))
+
     with col_chart2:
-        gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
         bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None),
             tooltip=[alt.Tooltip('Gerencia:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=420, 
+            height=dynamic_height, # Se usa la altura dinámica
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
         ).configure_view(
-            fill='transparent' # Fondo transparente para respetar border-radius
+            fill='transparent'
         )
         st.altair_chart(bar_chart, use_container_width=True)
 
@@ -235,8 +241,8 @@ else:
         gerencia_data_styled = gerencia_data.style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        # Se establece una altura fija para alinear con el gráfico
-        st.dataframe(gerencia_data_styled, use_container_width=True, height=420)
+        # Se usa la misma altura dinámica para garantizar la alineación
+        st.dataframe(gerencia_data_styled, use_container_width=True, height=dynamic_height)
 
 
     st.markdown("---")
