@@ -153,15 +153,25 @@ df_filtered = df[
 
 # --- KPIs Principales ---
 total_masa_salarial = df_filtered['Total Mensual'].sum()
-# --- CORRECCIÓN FINAL: Se vuelve al cálculo original y correcto sumando la columna 'Dotación' ---
-cantidad_empleados = df_filtered['Dotación'].sum()
+cantidad_empleados = 0
+latest_month_name = "N/A"
+
+# --- LÓGICA DE KPI CORREGIDA ---
+# La cantidad de empleados no es la suma de todos los meses.
+# Es la dotación del mes más reciente dentro del período filtrado.
+if not df_filtered.empty:
+    latest_month_num = df_filtered['Mes_Num'].max()
+    df_latest_month = df_filtered[df_filtered['Mes_Num'] == latest_month_num]
+    cantidad_empleados = df_latest_month['Dotación'].sum()
+    if not df_latest_month.empty:
+        latest_month_name = df_latest_month['Mes'].iloc[0]
+
 costo_medio = total_masa_salarial / cantidad_empleados if cantidad_empleados > 0 else 0
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Masa Salarial Total", f"${total_masa_salarial:,.0f}")
-# Se ajusta la etiqueta y el formato para que coincida con el objetivo
-col2.metric("Cantidad de Empleados (Dotación)", f"{int(cantidad_empleados)}")
-col3.metric("Costo Medio por Empleado", f"${costo_medio:,.0f}")
+col1.metric("Masa Salarial Total (Período)", f"${total_masa_salarial:,.0f}")
+col2.metric(f"Empleados ({latest_month_name})", f"{int(cantidad_empleados)}")
+col3.metric("Costo Medio por Empleado (Período)", f"${costo_medio:,.0f}")
     
 st.markdown("---")
 
