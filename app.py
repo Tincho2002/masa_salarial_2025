@@ -122,12 +122,23 @@ st.markdown("Análisis interactivo de los costos de la mano de obra de la compa�
     
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
-selected_gerencia = st.sidebar.multoselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
-selected_nivel = st.sidebar.multoselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
-selected_clasificacion = st.sidebar.multoselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
-selected_relacion = st.sidebar.multoselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
-meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
-selected_mes = st.sidebar.multoselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
+
+# MODIFICACIÓN: Crear listas de opciones antes de pasarlas a los widgets para evitar errores.
+gerencia_options = sorted(df['Gerencia'].unique())
+selected_gerencia = st.sidebar.multiselect('Gerencia', options=gerencia_options, default=gerencia_options)
+
+nivel_options = sorted(df['Nivel'].unique())
+selected_nivel = st.sidebar.multiselect('Nivel', options=nivel_options, default=nivel_options)
+
+clasificacion_options = sorted(df['Clasificacion_Ministerio'].unique())
+selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=clasificacion_options, default=clasificacion_options)
+
+relacion_options = sorted(df['Relación'].unique())
+selected_relacion = st.sidebar.multiselect('Relación', options=relacion_options, default=relacion_options)
+
+meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique().tolist()
+selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=meses_ordenados)
+
 
 # --- Aplicar filtros ---
 df_filtered = df[
@@ -166,9 +177,8 @@ else:
     st.subheader("Evolución Mensual de la Masa Salarial (Datos Detallados)")
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     
-    # MODIFICACIÓN: Gráfico con padding
     line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
-        x=alt.X('Mes:N', sort=meses_ordenados.tolist(), title='Mes'),
+        x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
         y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
         tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
     ).properties(
@@ -177,7 +187,6 @@ else:
     )
     st.altair_chart(line_chart, use_container_width=True)
     
-    # MODIFICACIÓN: Tabla debajo del gráfico para evitar desalineación
     with st.expander("Ver Datos de Evolución Mensual"):
         masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
             "Total Mensual": "${:,.2f}"
@@ -186,7 +195,6 @@ else:
 
     st.markdown("---")
 
-    # MODIFICACIÓN: Fila de Gráficos con padding
     col_grafico1, col_grafico2 = st.columns(2)
     with col_grafico1:
         st.subheader("Masa Salarial por Gerencia")
@@ -214,7 +222,6 @@ else:
         )
         st.altair_chart(donut_chart, use_container_width=True)
 
-    # MODIFICACIÓN: Fila de Tablas para evitar superposición
     col_tabla1, col_tabla2 = st.columns(2)
     with col_tabla1:
         st.write("Datos por Gerencia")
@@ -234,11 +241,8 @@ else:
 
 
     st.subheader("Tabla de Datos Detallados")
-    # MODIFICACIÓN: Usar styler para formato de miles correcto. La tabla será estática.
     df_filtered_styled = df_filtered.style.format({
         "Total Mensual": "${:,.2f}",
-        # Puedes agregar formato a otras columnas numéricas si es necesario
-        # "Otra Columna": "{:,.2f}" 
     })
     st.dataframe(df_filtered_styled, use_container_width=True)
 
