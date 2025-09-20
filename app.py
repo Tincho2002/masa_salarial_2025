@@ -43,7 +43,7 @@ h1, h2, h3 {
 """, unsafe_allow_html=True)
 
 # --- URL del archivo Excel en GitHub ---
-FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
+EXCEL_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
 
 # --- Carga de datos con cache ---
 @st.cache_data
@@ -166,4 +166,5 @@ else:
 
     st.subheader("Tabla de Datos Detallados")
     st.dataframe(df_filtered, use_container_width=True)
+
 
