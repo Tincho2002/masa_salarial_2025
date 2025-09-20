@@ -56,31 +56,35 @@ def load_data(url):
         # 1. Leer el excel indicando que la cabecera es la PRIMERA fila (índice 0)
         df = pd.read_excel(url, sheet_name='masa_salarial', header=0, engine='openpyxl')
         
-        # 2. La primera columna está vacía y pandas la lee como 'Unnamed: 0'. La eliminamos.
+        # 2. Limpiar los nombres de las columnas para eliminar espacios invisibles
+        df.columns = [str(col).strip() for col in df.columns]
+
+        # 3. La primera columna está vacía, la eliminamos si existe
         if 'Unnamed: 0' in df.columns:
             df = df.drop(columns=['Unnamed: 0'])
             
-        # 3. Limpiar los nombres de las columnas para eliminar espacios invisibles
-        df.columns = [str(col).strip() for col in df.columns]
-
-        # 4. Eliminar filas que estén completamente en blanco (si las hubiera)
-        df.dropna(how='all', inplace=True)
-        df.reset_index(drop=True, inplace=True)
-
-        # --- PREPROCESAMIENTO ---
+        # --- PREPROCESAMIENTO ROBUSTO ---
         if 'Período' not in df.columns:
             st.error("Error Crítico: La columna 'Período' no se encuentra.")
             st.info("Columnas encontradas:")
             st.write(df.columns.tolist())
             return pd.DataFrame()
-
+        
+        # 4. Convertir 'Período' a fecha. Las filas con fechas inválidas se marcarán como NaT.
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
-        df['Mes_Num'] = df['Período'].dt.month
+
+        # 5. PASO CRÍTICO: Eliminar cualquier fila donde la fecha no se pudo procesar.
+        # Esto purifica el DataFrame y previene errores internos de pandas.
+        df.dropna(subset=['Período'], inplace=True)
+        
+        # 6. Ahora que las fechas son válidas, crear columnas de mes de forma segura.
+        df['Mes_Num'] = df['Período'].dt.month.astype(int)
         
         meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
+        # 7. Procesar el resto de las columnas
         for col in ['Total Mensual', 'Dotación']:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
@@ -93,6 +97,7 @@ def load_data(url):
                 st.warning(f"Advertencia: La columna de filtro '{col}' no se encontró en los datos.")
                 df[col] = 'No Asignado'
         
+        df.reset_index(drop=True, inplace=True)
         return df
     except Exception as e:
         st.error(f"Ocurrió un error al cargar la hoja 'masa_salarial': {e}")
@@ -150,9 +155,6 @@ total_masa_salarial = df_filtered['Total Mensual'].sum()
 cantidad_empleados = 0
 latest_month_name = "N/A"
 
-# --- LÓGICA DE KPI CORREGIDA ---
-# La cantidad de empleados no es la suma de todos los meses.
-# Es la dotación del mes más reciente dentro del período filtrado.
 if not df_filtered.empty:
     latest_month_num = df_filtered['Mes_Num'].max()
     df_latest_month = df_filtered[df_filtered['Mes_Num'] == latest_month_num]
