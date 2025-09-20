@@ -30,7 +30,7 @@ body, .stApp {
 }
 
 /* --- Estilo para Contenedores y Tarjetas --- */
-[data-testid="stMetric"], .stDataFrame, [data-testid="stExpander"] {
+[data-testid="stMetric"], .stDataFrame, [data-testid="stExpander"], .st-emotion-cache-1n7693g {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     border-radius: 10px;
@@ -67,8 +67,7 @@ h1, h2, h3 {
 """, unsafe_allow_html=True)
 
 # --- URL del archivo en GitHub (RAW) ---
-# IMPORTANTE: Reemplaza esta URL con la URL "Raw" de tu propio archivo en GitHub
-FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
+FILE_URL = "https://raw.githubusercontent.com/Maiben1971/masa_salarial_2025/main/masa_salarial_2025.xlsx"
 
 
 # --- Carga de datos con cache para optimizar rendimiento ---
@@ -78,16 +77,18 @@ def load_data(url):
     Carga y preprocesa los datos desde una URL de un archivo Excel.
     """
     try:
-        df = pd.read_excel(url, sheet_name='masa_salarial', header=1)
+        # CORRECCIÓN: Usar skiprows=1 es más robusto. Le dice a pandas que ignore
+        # la primera fila (que está vacía) y use la siguiente como encabezado.
+        df = pd.read_excel(url, sheet_name='masa_salarial', skiprows=1)
         
-        # Limpieza de nombres de columnas
         df.columns = df.columns.str.strip()
         
-        # Eliminar la primera columna si no tiene nombre
+        # Esta lógica es para manejar la primera columna vacía que a veces se genera desde Excel
         if df.columns[0].startswith('Unnamed'):
             df = df.iloc[:, 1:]
 
         # --- PREPROCESAMIENTO ---
+        # La línea de abajo, que antes daba error, ahora debería encontrar la columna 'Período'.
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
         df['Mes_Num'] = df['Período'].dt.month
         
@@ -112,7 +113,6 @@ def load_data(url):
                 return pd.DataFrame()
         
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
-
         return df
     except Exception as e:
         st.error(f"Ocurrió un error al cargar o procesar el archivo desde la URL: {e}")
@@ -133,12 +133,10 @@ if df.empty:
     
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
-
 selected_gerencia = st.sidebar.multiselect('Gerencia', options=sorted(df['Gerencia'].unique()), default=df['Gerencia'].unique())
 selected_nivel = st.sidebar.multiselect('Nivel', options=sorted(df['Nivel'].unique()), default=df['Nivel'].unique())
 selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=sorted(df['Clasificacion_Ministerio'].unique()), default=df['Clasificacion_Ministerio'].unique())
 selected_relacion = st.sidebar.multiselect('Relación', options=sorted(df['Relación'].unique()), default=df['Relación'].unique())
-
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique()
 selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=list(meses_ordenados))
 
@@ -172,23 +170,63 @@ st.header("Análisis de Datos")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
+    # --- GRÁFICO DE EVOLUCIÓN MENSUAL ---
     st.subheader("Evolución de la Masa Salarial Mensual")
     masa_mensual = df_filtered.groupby('Mes_Num').agg({'Total Mensual': 'sum'}).reset_index().sort_values('Mes_Num')
     
-    chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
+    line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
         x=alt.X('Mes_Num:O', title='Mes', axis=alt.Axis(
             values=list(range(1, 13)),
             labelExpr="['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][datum.value - 1]"
         )),
-        y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0f')),
+        y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
         tooltip=[
-            alt.Tooltip('Mes_Num:N', title='Mes', format=''), # Formato se controla en el labelExpr
+            alt.Tooltip('Mes_Num:N', title='Mes', format=''),
             alt.Tooltip('Total Mensual:Q', title='Masa Salarial', format='$,.0f')
         ]
     ).properties(height=350)
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(line_chart, use_container_width=True)
 
+    st.markdown("---")
+
+    # --- GRÁFICOS DE DISTRIBUCIÓN ---
+    col_grafico1, col_grafico2 = st.columns(2)
+
+    with col_grafico1:
+        st.subheader("Masa Salarial por Gerencia")
+        gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().reset_index()
+        
+        bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
+            x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+            y=alt.Y('Gerencia:N', sort='-x', title='Gerencia'),
+            tooltip=[
+                alt.Tooltip('Gerencia:N', title='Gerencia'),
+                alt.Tooltip('Total Mensual:Q', title='Masa Salarial', format='$,.0f')
+            ]
+        ).properties(
+            height=400
+        )
+        st.altair_chart(bar_chart, use_container_width=True)
+
+    with col_grafico2:
+        st.subheader("Masa Salarial por Clasificación")
+        clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
+        
+        donut_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=80).encode(
+            theta=alt.Theta(field="Total Mensual", type="quantitative"),
+            color=alt.Color(field="Clasificacion_Ministerio", type="nominal", title="Clasificación"),
+            tooltip=[
+                alt.Tooltip('Clasificacion_Ministerio:N', title='Clasificación'),
+                alt.Tooltip('Total Mensual:Q', title='Masa Salarial', format='$,.0f')
+            ]
+        ).properties(
+            height=400
+        )
+        st.altair_chart(donut_chart, use_container_width=True)
+
+    st.markdown("---")
+
+    # --- TABLA DE DATOS DETALLADOS ---
     st.subheader("Tabla de Datos Detallados")
     st.dataframe(df_filtered, use_container_width=True)
-
 
