@@ -215,13 +215,13 @@ else:
     st.subheader("Masa Salarial por Gerencia")
     
     with st.container():
-        # MODIFICACIÓN: Tabla a la izquierda (1/3), gráfico a la derecha (2/3)
-        col_table2, col_chart2 = st.columns([1, 2])
+        # MODIFICACIÓN FINAL: Proporciones de columna [Tabla 40%, Gráfico 60%]
+        col_table2, col_chart2 = st.columns([2, 3])
 
         gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
 
         # Altura fija y generosa para ambos elementos para que queden parejos.
-        fixed_height = 650
+        fixed_height = 700
 
         # Columna de la izquierda: La Tabla
         with col_table2:
@@ -237,14 +237,14 @@ else:
                 x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Gerencia:N', sort='-x', title=None,
                         axis=alt.Axis(
-                            # Se mantiene el límite para las etiquetas como medida de seguridad
-                            labelLimit=150 
+                            # Límite estricto a las etiquetas para evitar el desborde. El nombre completo se ve en el tooltip.
+                            labelLimit=120
                         )
                        ),
                 tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
             ).properties(
                 height=fixed_height,
-                padding={"left": 10, "top": 10, "right": 10, "bottom": 10}
+                padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
             ).configure_view(
                 fill='transparent'
             )
