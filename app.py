@@ -52,27 +52,30 @@ def load_data(url):
     Carga y preprocesa los datos detallados de la hoja 'masa_salarial'.
     """
     try:
-        # --- MÉTODO DE LECTURA ROBUSTO ---
+        # --- MÉTODO DE LECTURA DEFINITIVO ---
         # 1. Leer el excel sin encabezado para tener control total
-        df = pd.read_excel(url, sheet_name='masa_salarial', header=None, engine='openpyxl')
+        df_raw = pd.read_excel(url, sheet_name='masa_salarial', header=None, engine='openpyxl')
         
-        # 2. Extraer los nombres de la segunda fila (índice 1) y limpiarlos INMEDIATAMENTE
-        # Se convierte cada nombre a string y se eliminan espacios/caracteres invisibles
-        column_names = [str(name).strip() for name in df.iloc[1].tolist()]
+        # 2. Extraer los nombres de la segunda fila (índice 1) y limpiarlos
+        column_names = [str(name).strip() for name in df_raw.iloc[1].tolist()]
+        
+        # 3. Crear un nuevo DataFrame solo con los datos, que empiezan en la tercera fila (índice 2)
+        df = df_raw.iloc[2:].copy()
+        
+        # 4. Asignar los nombres de columna limpios al nuevo DataFrame
         df.columns = column_names
+
+        # 5. Reiniciar el índice del DataFrame de datos
+        df.reset_index(drop=True, inplace=True)
+
+        # 6. Eliminar la primera columna si está vacía (identificada como 'nan' o '')
+        if df.columns[0] in ['nan', '']:
+            df = df.iloc[:, 1:].copy()
         
-        # 3. Eliminar las filas superiores que no son datos (título y fila de encabezado original)
-        df = df.drop([0, 1]).reset_index(drop=True)
-
-        # 4. Eliminar la primera columna si se llama 'nan' (resultado de la limpieza)
-        if 'nan' in df.columns:
-            df = df.drop(columns=['nan'])
-
         # --- PREPROCESAMIENTO ---
-        # 5. Verificación final de la columna 'Período'
         if 'Período' not in df.columns:
-            st.error("Error Crítico: La columna 'Período' no se encuentra después de la limpieza.")
-            st.info("Columnas encontradas por la aplicación:")
+            st.error("Error Crítico: La columna 'Período' no se encuentra.")
+            st.info("Columnas encontradas:")
             st.write(df.columns.tolist())
             return pd.DataFrame()
 
@@ -116,7 +119,6 @@ def load_summary_data(url):
 # --- Carga de datos ---
 df = load_data(FILE_URL)
 summary_df = load_summary_data(FILE_URL)
-
 
 if df.empty:
     st.error("La carga de datos detallados ha fallado. El dashboard no puede continuar.")
