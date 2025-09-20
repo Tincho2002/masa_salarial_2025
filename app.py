@@ -29,6 +29,7 @@ body, .stApp {
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow: hidden; /* MODIFICACIÓN: Asegurar que el contenido respete el borde redondeado */
 }
 [data-testid="stMetricLabel"] {
     color: #555;
@@ -44,10 +45,6 @@ h1, h2, h3 {
     display: flex;
     justify-content: center;
     align-items: center;
-}
-/* MODIFICACIÓN: Aplicar border-radius al canvas del gráfico */
-[data-testid="stAltairChart"] canvas {
-    border-radius: 10px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -204,7 +201,6 @@ else:
         st.altair_chart(line_chart, use_container_width=True)
     
     with col_table1:
-        # MODIFICACIÓN: Se eliminó el título de la tabla
         masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
@@ -214,7 +210,8 @@ else:
 
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
-    col_table2, col_chart2 = st.columns([1, 2])
+    # MODIFICACIÓN: Ajustar la proporción de las columnas para un mejor balance visual
+    col_table2, col_chart2 = st.columns([1, 1.5])
     
     with col_chart2:
         gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
@@ -223,13 +220,12 @@ else:
             y=alt.Y('Gerencia:N', sort='-x', title=None),
             tooltip=[alt.Tooltip('Gerencia:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=400,
+            height=420, # MODIFICACIÓN: Aumentar altura para emparejar con la tabla
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
         )
         st.altair_chart(bar_chart, use_container_width=True)
 
     with col_table2:
-        # MODIFICACIÓN: Se eliminó el título de la tabla
         gerencia_data_styled = gerencia_data.style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
@@ -254,7 +250,6 @@ else:
         st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
-        # MODIFICACIÓN: Se eliminó el título de la tabla
         clasificacion_data_styled = clasificacion_data.rename(
             columns={'Clasificacion_Ministerio': 'Clasificación'}
         ).style.format({
