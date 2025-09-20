@@ -52,14 +52,29 @@ def load_data(url):
     Carga y preprocesa los datos desde una URL de un archivo Excel.
     """
     try:
-        # Usar header=1 para indicar que la segunda fila contiene los encabezados
-        df = pd.read_excel(url, sheet_name='masa_salarial', header=1, engine='openpyxl')
+        # --- MÉTODO DE LECTURA ROBUSTO ---
+        # 1. Leer el excel sin encabezado para tener control total
+        df = pd.read_excel(url, sheet_name='masa_salarial', header=None, engine='openpyxl')
         
+        # 2. Asignar explícitamente la segunda fila (índice 1) como los nombres de las columnas
+        df.columns = df.iloc[1]
+        
+        # 3. Eliminar las filas superiores que no son datos (título y fila de encabezado original)
+        df = df.drop([0, 1]).reset_index(drop=True)
+
+        # --- Limpieza de nombres de columnas y datos ---
         df.columns = df.columns.str.strip()
         if 'Unnamed: 0' in df.columns:
             df = df.drop(columns=['Unnamed: 0'])
 
         # --- PREPROCESAMIENTO ---
+        # Se verifica que la columna 'Período' exista antes de usarla
+        if 'Período' not in df.columns:
+            st.error("Error Crítico: La columna 'Período' no se encuentra. Revisa el archivo Excel.")
+            st.info("Columnas encontradas por la aplicación:")
+            st.write(df.columns.tolist())
+            return pd.DataFrame()
+
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
         df['Mes_Num'] = df['Período'].dt.month
         
@@ -166,6 +181,4 @@ else:
 
     st.subheader("Tabla de Datos Detallados")
     st.dataframe(df_filtered, use_container_width=True)
-
-
 
