@@ -214,26 +214,27 @@ else:
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
     
-    # Usar un contenedor para aislar esta sección compleja
     with st.container():
         col_table2, col_chart2 = st.columns([2, 3])
 
-        # Se preparan los datos fuera de las columnas para usarlos en ambas
         gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
 
-        # --- Altura Dinámica Refinada ---
-        num_gerencias = len(gerencia_data)
-        # 40px por barra/fila + 60px de espacio extra para cabeceras y padding.
-        dynamic_height = max(400, num_gerencias * 40 + 60)
+        # Altura fija y generosa para ambos elementos para que queden parejos.
+        fixed_height = 650
 
         with col_chart2:
             bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
                 x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-                # MODIFICACIÓN: Se agrega labelPadding para dar más espacio a las etiquetas del eje Y y evitar superposición
-                y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelPadding=10)),
+                y=alt.Y('Gerencia:N', sort='-x', title=None,
+                        axis=alt.Axis(
+                            # SOLUCIÓN DEFINITIVA: Limita el ancho de las etiquetas en píxeles
+                            # para evitar que el gráfico se desborde sobre la tabla.
+                            labelLimit=200
+                        )
+                       ),
                 tooltip=[alt.Tooltip('Gerencia:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
             ).properties(
-                height=dynamic_height, # Se usa la altura dinámica
+                height=fixed_height,
                 padding={"left": 10, "top": 10, "right": 10, "bottom": 10}
             ).configure_view(
                 fill='transparent'
@@ -244,8 +245,8 @@ else:
             gerencia_data_styled = gerencia_data.style.format({
                 "Total Mensual": "${:,.2f}"
             }).hide(axis="index")
-            # Se usa la misma altura dinámica para garantizar la alineación
-            st.dataframe(gerencia_data_styled, use_container_width=True, height=dynamic_height)
+            # Se usa la misma altura fija para garantizar la alineación perfecta
+            st.dataframe(gerencia_data_styled, use_container_width=True, height=fixed_height)
 
     st.markdown("---")
 
