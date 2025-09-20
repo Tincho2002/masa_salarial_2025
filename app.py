@@ -24,13 +24,21 @@ body, .stApp {
     border-right: 1px solid #e0e0e0;
 }
 /* Estilo para todos los contenedores principales con padding y bordes redondeados */
-[data-testid="stMetric"], .stDataFrame, [data-testid="stAltairChart"], .stContainer {
+[data-testid="stMetric"], .stDataFrame, .stContainer {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-radius: 10px !important;
     overflow: hidden !important;
     padding: 20px;
+}
+/* CORRECCIÓN DEFINITIVA: Forzar el padding en los contenedores de los gráficos */
+div[data-testid="stAltairChart"] {
+    background-color: var(--secondary-background-color);
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border-radius: 10px !important;
+    padding: 1rem; /* Padding profesional */
 }
 h1, h2, h3 {
     color: var(--primary-color);
@@ -202,16 +210,11 @@ else:
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
     
-    col_table2, col_chart2 = st.columns([2, 3])
+    # CORRECCIÓN DEFINITIVA: Gráfico a la izquierda, tabla a la derecha
+    col_chart2, col_table2 = st.columns([3, 2])
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
     
     fixed_height = 600
-
-    with col_table2:
-        gerencia_data_styled = gerencia_data.style.format({
-            "Total Mensual": "${:,.2f}"
-        }).hide(axis="index")
-        st.dataframe(gerencia_data_styled, use_container_width=True, height=fixed_height)
 
     with col_chart2:
         bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
@@ -227,6 +230,12 @@ else:
             fill='transparent'
         )
         st.altair_chart(bar_chart, use_container_width=True)
+        
+    with col_table2:
+        gerencia_data_styled = gerencia_data.style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(gerencia_data_styled, use_container_width=True, height=fixed_height)
 
     st.markdown("---")
 
