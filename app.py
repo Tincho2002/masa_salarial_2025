@@ -23,13 +23,14 @@ body, .stApp {
     background-color: var(--secondary-background-color);
     border-right: 1px solid #e0e0e0;
 }
+/* MODIFICACIÓN: Se aplica el estilo a todos los contenedores principales */
 [data-testid="stMetric"], .stDataFrame, .st-emotion-cache-1n7693g, [data-testid="stExpander"], [data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    overflow: hidden; /* MODIFICACIÓN: Asegurar que el contenido respete el borde redondeado */
+    overflow: hidden; /* Clave para que el contenido respete los bordes redondeados */
 }
 [data-testid="stMetricLabel"] {
     color: #555;
@@ -210,8 +211,8 @@ else:
 
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
-    # MODIFICACIÓN: Ajustar la proporción de las columnas para un mejor balance visual
-    col_table2, col_chart2 = st.columns([1, 1.5])
+    # MODIFICACIÓN: Ajustar proporción de columnas
+    col_table2, col_chart2 = st.columns([2, 3])
     
     with col_chart2:
         gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
@@ -220,7 +221,7 @@ else:
             y=alt.Y('Gerencia:N', sort='-x', title=None),
             tooltip=[alt.Tooltip('Gerencia:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
-            height=420, # MODIFICACIÓN: Aumentar altura para emparejar con la tabla
+            height=420, 
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
         )
         st.altair_chart(bar_chart, use_container_width=True)
@@ -229,7 +230,8 @@ else:
         gerencia_data_styled = gerencia_data.style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        st.dataframe(gerencia_data_styled, use_container_width=True, height=400)
+        # MODIFICACIÓN: Sincronizar altura con el gráfico
+        st.dataframe(gerencia_data_styled, use_container_width=True, height=420)
 
     st.markdown("---")
 
