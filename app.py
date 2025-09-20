@@ -32,7 +32,7 @@ body, .stApp {
     overflow: hidden !important;
     padding: 20px;
 }
-/* CORRECCIÓN DEFINITIVA: Forzar el padding en los contenedores de los gráficos */
+/* Forzar el padding en los contenedores de los gráficos */
 div[data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
@@ -210,7 +210,6 @@ else:
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
     
-    # CORRECCIÓN DEFINITIVA: Gráfico a la izquierda, tabla a la derecha
     col_chart2, col_table2 = st.columns([3, 2])
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
     
@@ -220,7 +219,6 @@ else:
         bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None,
-                    # Blindaje final: limita el ancho de la etiqueta para evitar desbordamiento
                     axis=alt.Axis(labelLimit=120)
                    ),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
@@ -283,36 +281,38 @@ else:
     )
 
 # --- Sección de Resumen Anual ---
+# SOLUCIÓN DEFINITIVA: Se elimina el st.expander para evitar conflictos de renderizado.
 if summary_df is not None:
-    with st.expander("Ver Resumen de Evolución Anual (Datos de Control de la Hoja Excel)"):
-        st.subheader("Tabla de Resumen Anual por Clasificación")
-        
-        summary_formatters = {
-            col: "${:,.2f}"
-            for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
-        }
-        st.dataframe(summary_df.style.format(summary_formatters), use_container_width=True)
-        
-        summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
-            id_vars='Mes',
-            var_name='Clasificacion',
-            value_name='Masa Salarial'
-        )
-        
-        st.subheader("Gráfico de Resumen Anual")
-        summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
-            x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
-            y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-            color=alt.Color('Clasificacion:N', title='Clasificación'),
-            tooltip=[
-                alt.Tooltip('Mes:N'),
-                alt.Tooltip('Clasificacion:N'),
-                alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')
-            ]
-        ).properties(
-            height=350
-        ).configure_view(
-            fill='transparent'
-        )
-        st.altair_chart(summary_chart, use_container_width=True)
+    st.markdown("---")
+    st.subheader("Resumen de Evolución Anual (Datos de Control)")
+    
+    st.subheader("Tabla de Resumen Anual por Clasificación")
+    summary_formatters = {
+        col: "${:,.2f}"
+        for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
+    }
+    st.dataframe(summary_df.style.format(summary_formatters), use_container_width=True)
+    
+    summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
+        id_vars='Mes',
+        var_name='Clasificacion',
+        value_name='Masa Salarial'
+    )
+    
+    st.subheader("Gráfico de Resumen Anual")
+    summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
+        x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
+        y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+        color=alt.Color('Clasificacion:N', title='Clasificación'),
+        tooltip=[
+            alt.Tooltip('Mes:N'),
+            alt.Tooltip('Clasificacion:N'),
+            alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')
+        ]
+    ).properties(
+        height=350
+    ).configure_view(
+        fill='transparent'
+    )
+    st.altair_chart(summary_chart, use_container_width=True)
 
