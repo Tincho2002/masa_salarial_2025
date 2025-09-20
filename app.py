@@ -205,7 +205,7 @@ else:
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
         # SOLUCIÓN: Ajustar altura de la tabla para balance visual
-        st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1 - 5)
+        st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1 - 10)
 
     st.markdown("---")
 
@@ -236,7 +236,7 @@ else:
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
         # SOLUCIÓN: Ajustar altura de la tabla para balance visual
-        st.dataframe(gerencia_data_styled, use_container_width=True, height=chart_height2 - 5)
+        st.dataframe(gerencia_data_styled, use_container_width=True, height=chart_height2 - 10)
 
     st.markdown("---")
 
@@ -265,7 +265,7 @@ else:
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
         # SOLUCIÓN: Ajustar altura de la tabla para balance visual
-        st.dataframe(clasificacion_data_styled, use_container_width=True, height=chart_height3 - 5)
+        st.dataframe(clasificacion_data_styled, use_container_width=True, height=chart_height3 - 10)
 
 
     st.markdown("---")
