@@ -24,12 +24,12 @@ body, .stApp {
     border-right: 1px solid #e0e0e0;
 }
 /* Estilo para todos los contenedores principales */
-[data-testid="stMetric"], .stDataFrame, [data-testid="stAltairChart"] {
+[data-testid="stMetric"], .stDataFrame, [data-testid="stAltairChart"], .stContainer {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border-radius: 10px;
-    overflow: hidden;
+    border-radius: 10px !important;
+    overflow: hidden !important;
     padding: 20px;
 }
 h1, h2, h3 {
@@ -175,60 +175,68 @@ else:
     col_chart1, col_table1 = st.columns([2, 1])
     
     with col_chart1:
-        masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
-        line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
-            x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
-            y=alt.Y('Total Mensual:Q',
-                    title='Masa Salarial ($)',
-                    axis=alt.Axis(format='$,.0s'),
-                    scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)
-                   ),
-            tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(
-            height=350
-        ).configure_view(
-            fill='transparent' 
-        )
-        st.altair_chart(line_chart, use_container_width=True)
+        with st.container():
+            masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
+            line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
+                x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
+                y=alt.Y('Total Mensual:Q',
+                        title='Masa Salarial ($)',
+                        axis=alt.Axis(format='$,.0s'),
+                        scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)
+                       ),
+                tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
+            ).properties(
+                height=350
+            ).configure_view(
+                fill='transparent' 
+            )
+            st.altair_chart(line_chart, use_container_width=True)
     
     with col_table1:
-        masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
-            "Total Mensual": "${:,.2f}"
-        }).hide(axis="index")
-        st.dataframe(masa_mensual_styled, use_container_width=True)
+        with st.container():
+            masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
+                "Total Mensual": "${:,.2f}"
+            }).hide(axis="index")
+            st.dataframe(masa_mensual_styled, use_container_width=True)
 
     st.markdown("---")
 
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
     
-    col_table2, col_chart2 = st.columns([2, 3])
+    # CORRECCIÓN DEFINITIVA: Gráfico a la izquierda, tabla a la derecha
+    col_chart2, col_table2 = st.columns([3, 2])
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
-
-    # SOLUCIÓN DEFINITIVA: Sincronizar la altura de la tabla con la altura dinámica del gráfico
-    # (1 fila de cabecera + N filas de datos) * 35px por fila + 3px de buffer
-    dataframe_height = (len(gerencia_data) + 1) * 35 + 3
-
-    with col_table2:
-        gerencia_data_styled = gerencia_data.style.format({
-            "Total Mensual": "${:,.2f}"
-        }).hide(axis="index")
-        st.dataframe(gerencia_data_styled, use_container_width=True, height=dataframe_height)
+    
+    # CORRECCIÓN DEFINITIVA: Altura fija y generosa para ambos
+    fixed_height = 800
 
     with col_chart2:
-        bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
-            x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-            y=alt.Y('Gerencia:N', sort='-x', title=None)
-        ).properties(
-            # SOLUCIÓN DEFINITIVA: Usar las propiedades nativas de Altair para el tamaño
-            width='container',
-            height=alt.Step(28)  # alt.Step controla la altura de cada barra, haciendo el alto total dinámico y predecible
-        ).configure_view(
-            stroke='transparent' # Usar 'stroke' en lugar de 'fill' para el fondo
-        ).configure_axisY(
-            labelLimit=120 # Un límite de seguridad para las etiquetas, evitando que se desborden
-        )
-        st.altair_chart(bar_chart, use_container_width=True)
+        # CORRECCIÓN DEFINITIVA: Contenedor para el gráfico
+        with st.container():
+            bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
+                x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+                y=alt.Y('Gerencia:N', sort='-x', title=None,
+                        axis=alt.Axis(
+                            # CORRECCIÓN DEFINITIVA: Límite estricto a las etiquetas para evitar el desborde.
+                            labelLimit=120
+                        )
+                       ),
+                tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
+            ).properties(
+                height=fixed_height
+            ).configure_view(
+                fill='transparent'
+            )
+            st.altair_chart(bar_chart, use_container_width=True)
+            
+    with col_table2:
+        # CORRECCIÓN DEFINITIVA: Contenedor para la tabla
+        with st.container():
+            gerencia_data_styled = gerencia_data.style.format({
+                "Total Mensual": "${:,.2f}"
+            }).hide(axis="index")
+            st.dataframe(gerencia_data_styled, use_container_width=True, height=fixed_height)
 
     st.markdown("---")
 
@@ -238,24 +246,26 @@ else:
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
 
     with col_chart3:
-        donut_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=80).encode(
-            theta=alt.Theta("Total Mensual:Q"),
-            color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
-            tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(
-            height=400
-        ).configure_view(
-            fill='transparent' 
-        )
-        st.altair_chart(donut_chart, use_container_width=True)
+        with st.container():
+            donut_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=80).encode(
+                theta=alt.Theta("Total Mensual:Q"),
+                color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
+                tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
+            ).properties(
+                height=400
+            ).configure_view(
+                fill='transparent' 
+            )
+            st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
-        clasificacion_data_styled = clasificacion_data.rename(
-            columns={'Clasificacion_Ministerio': 'Clasificación'}
-        ).style.format({
-            "Total Mensual": "${:,.2f}"
-        }).hide(axis="index")
-        st.dataframe(clasificacion_data_styled, use_container_width=True)
+        with st.container():
+            clasificacion_data_styled = clasificacion_data.rename(
+                columns={'Clasificacion_Ministerio': 'Clasificación'}
+            ).style.format({
+                "Total Mensual": "${:,.2f}"
+            }).hide(axis="index")
+            st.dataframe(clasificacion_data_styled, use_container_width=True)
 
 
     st.markdown("---")
