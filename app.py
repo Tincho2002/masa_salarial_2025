@@ -188,7 +188,8 @@ else:
             ).properties(
                 height=350
             ).configure_view(
-                fill='transparent' 
+                fill='transparent',
+                padding=15  # CORRECCIÓN: Padding para profesionalismo
             )
             st.altair_chart(line_chart, use_container_width=True)
     
@@ -197,41 +198,36 @@ else:
             masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
                 "Total Mensual": "${:,.2f}"
             }).hide(axis="index")
-            st.dataframe(masa_mensual_styled, use_container_width=True)
+            st.dataframe(masa_mensual_styled, use_container_width=True, height=385) # CORRECCIÓN: Altura ajustada
 
     st.markdown("---")
 
     # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
     
-    # CORRECCIÓN DEFINITIVA: Gráfico a la izquierda, tabla a la derecha
     col_chart2, col_table2 = st.columns([3, 2])
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
     
-    # CORRECCIÓN DEFINITIVA: Altura fija y generosa para ambos
-    fixed_height = 800
+    # CORRECCIÓN: Altura reducida para evitar scroll excesivo
+    fixed_height = 500
 
     with col_chart2:
-        # CORRECCIÓN DEFINITIVA: Contenedor para el gráfico
         with st.container():
             bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
                 x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Gerencia:N', sort='-x', title=None,
-                        axis=alt.Axis(
-                            # CORRECCIÓN DEFINITIVA: Límite estricto a las etiquetas para evitar el desborde.
-                            labelLimit=120
-                        )
+                        axis=alt.Axis(labelLimit=120)
                        ),
                 tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
             ).properties(
                 height=fixed_height
             ).configure_view(
-                fill='transparent'
+                fill='transparent',
+                padding=15  # CORRECCIÓN: Padding para profesionalismo
             )
             st.altair_chart(bar_chart, use_container_width=True)
             
     with col_table2:
-        # CORRECCIÓN DEFINITIVA: Contenedor para la tabla
         with st.container():
             gerencia_data_styled = gerencia_data.style.format({
                 "Total Mensual": "${:,.2f}"
@@ -252,9 +248,10 @@ else:
                 color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
                 tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
             ).properties(
-                height=400
+                height=350 # CORRECCIÓN: Altura reducida
             ).configure_view(
-                fill='transparent' 
+                fill='transparent',
+                padding=15 # CORRECCIÓN: Padding para profesionalismo
             )
             st.altair_chart(donut_chart, use_container_width=True)
 
@@ -265,7 +262,7 @@ else:
             ).style.format({
                 "Total Mensual": "${:,.2f}"
             }).hide(axis="index")
-            st.dataframe(clasificacion_data_styled, use_container_width=True)
+            st.dataframe(clasificacion_data_styled, use_container_width=True, height=385) # CORRECCIÓN: Altura ajustada
 
 
     st.markdown("---")
@@ -313,9 +310,10 @@ if summary_df is not None:
                 alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')
             ]
         ).properties(
-            height=400
+            height=350 # CORRECCIÓN: Altura reducida
         ).configure_view(
-            fill='transparent'
+            fill='transparent',
+            padding=15 # CORRECCIÓN: Padding para profesionalismo
         )
         st.altair_chart(summary_chart, use_container_width=True)
 
