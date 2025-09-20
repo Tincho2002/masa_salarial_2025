@@ -178,7 +178,11 @@ else:
     
     line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
         x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
-        y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+        y=alt.Y('Total Mensual:Q',
+                title='Masa Salarial ($)',
+                axis=alt.Axis(format='$,.0s'),
+                scale=alt.Scale(domainMin=3000000000) # MODIFICACIÓN: El eje Y comienza en 3G
+               ),
         tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
     ).properties(
         height=350,
@@ -286,4 +290,5 @@ if summary_df is not None:
             padding={"left": 20, "top": 10, "right": 10, "bottom": 10}
         )
         st.altair_chart(summary_chart, use_container_width=True)
+
 
