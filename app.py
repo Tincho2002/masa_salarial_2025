@@ -215,24 +215,33 @@ else:
     st.subheader("Masa Salarial por Gerencia")
     
     with st.container():
-        col_table2, col_chart2 = st.columns([2, 3])
+        # MODIFICACIÓN: Tabla a la izquierda (1/3), gráfico a la derecha (2/3)
+        col_table2, col_chart2 = st.columns([1, 2])
 
         gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
 
         # Altura fija y generosa para ambos elementos para que queden parejos.
         fixed_height = 650
 
+        # Columna de la izquierda: La Tabla
+        with col_table2:
+            gerencia_data_styled = gerencia_data.style.format({
+                "Total Mensual": "${:,.2f}"
+            }).hide(axis="index")
+            # Se usa la misma altura fija para garantizar la alineación perfecta
+            st.dataframe(gerencia_data_styled, use_container_width=True, height=fixed_height)
+
+        # Columna de la derecha: El Gráfico
         with col_chart2:
             bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
                 x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Gerencia:N', sort='-x', title=None,
                         axis=alt.Axis(
-                            # SOLUCIÓN DEFINITIVA: Limita el ancho de las etiquetas en píxeles
-                            # para evitar que el gráfico se desborde sobre la tabla.
-                            labelLimit=200
+                            # Se mantiene el límite para las etiquetas como medida de seguridad
+                            labelLimit=150 
                         )
                        ),
-                tooltip=[alt.Tooltip('Gerencia:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
+                tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
             ).properties(
                 height=fixed_height,
                 padding={"left": 10, "top": 10, "right": 10, "bottom": 10}
@@ -240,13 +249,6 @@ else:
                 fill='transparent'
             )
             st.altair_chart(bar_chart, use_container_width=True)
-
-        with col_table2:
-            gerencia_data_styled = gerencia_data.style.format({
-                "Total Mensual": "${:,.2f}"
-            }).hide(axis="index")
-            # Se usa la misma altura fija para garantizar la alineación perfecta
-            st.dataframe(gerencia_data_styled, use_container_width=True, height=fixed_height)
 
     st.markdown("---")
 
