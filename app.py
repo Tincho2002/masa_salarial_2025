@@ -46,7 +46,9 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-# --- Funciones de Exportación (sin cambios) ---
+
+# --- FUNCIONES DE EXPORTACIÓN ---
+
 def to_excel(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -54,22 +56,41 @@ def to_excel(df):
     return output.getvalue()
 
 def to_pdf(df):
-    pdf = FPDF(orientation='L', unit='mm', format='A3')
+    """Convierte un DataFrame a un archivo PDF bien formateado usando HTML."""
+    html_table = df.to_html(index=False, border=0)
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: "Arial", sans-serif; }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th, td {{
+            padding: 6px 5px;
+            text-align: left;
+            border: 1px solid #dddddd;
+            font-size: 9px;
+        }}
+        thead th {{
+            background-color: #f2f2f2;
+            font-size: 10px;
+            font-weight: bold;
+        }}
+    </style>
+    </head>
+    <body>
+        <h2>Reporte Resumido de Datos</h2>
+        {html_table}
+    </body>
+    </html>
+    """
+    pdf = FPDF(orientation='P', unit='mm', format='A4') # Cambiado a Portrarit y A4
     pdf.add_page()
-    pdf.set_font('Arial', '', 8)
-    cols = df.columns
-    col_width = pdf.w / (len(cols) + 1)
-    for col in cols:
-        pdf.cell(col_width, 10, str(col), border=1)
-    pdf.ln()
-    for index, row in df.iterrows():
-        for col in cols:
-            cell_text = str(row[col]).encode('latin-1', 'replace').decode('latin-1')
-            pdf.cell(col_width, 10, cell_text, border=1)
-        pdf.ln()
+    pdf.write_html(html_content)
     return bytes(pdf.output())
 
-# --- Carga de Datos (sin cambios) ---
+# --- CARGA DE DATOS ---
 @st.cache_data
 def load_data(url):
     df = pd.read_excel(url, sheet_name='masa_salarial', header=0, engine='openpyxl')
@@ -110,14 +131,15 @@ def load_summary_data(url):
     except Exception as e:
         st.warning(f"No se pudo cargar la hoja de resumen 'Evolución Anual': {e}")
         return None
-
-# --- Bloque principal (sin cambios hasta la tabla detallada) ---
+        
 FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
 df = load_data(FILE_URL)
 summary_df = load_summary_data(FILE_URL)
+
 if df.empty:
     st.error("La carga de datos detallados ha fallado. El dashboard no puede continuar.")
     st.stop()
+    
 st.title('📊 Dashboard de Masa Salarial 2025')
 st.markdown("Análisis interactivo de los costos de la mano de obra de la compañía.")
 st.sidebar.header('Filtros del Dashboard')
@@ -150,7 +172,6 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    # --- Gráficos superiores (sin cambios) ---
     st.subheader("Evolución Mensual de la Masa Salarial")
     col_chart1, col_table1 = st.columns([2, 1])
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
@@ -183,59 +204,50 @@ else:
     with col_table3:
         st.dataframe(clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height3)
     st.write("")
-
-    # --- INICIA LA SOLUCIÓN FINAL CON PAGINACIÓN ---
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     df_display = df_filtered.copy().reset_index(drop=True)
-
     if not df_display.empty:
-        # Botones de descarga (descargan el dataframe COMPLETO)
-        st.markdown("##### Descargar datos de la tabla completa")
+        st.markdown("##### Descargar datos")
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
-            st.download_button(label="📥 Descargar como CSV", data=df_display.to_csv(index=False).encode('utf-8'), file_name='datos_detallados.csv', mime='text/csv', use_container_width=True)
+            st.download_button(label="📥 CSV (Tabla Completa)", data=df_display.to_csv(index=False).encode('utf-8'), file_name='datos_detallados.csv', mime='text/csv', use_container_width=True)
         with col_btn2:
-            st.download_button(label="📥 Descargar como Excel", data=to_excel(df_display), file_name='datos_detallados.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+            st.download_button(label="📥 Excel (Tabla Completa)", data=to_excel(df_display), file_name='datos_detallados.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
         with col_btn3:
-            st.download_button(label="📥 Descargar como PDF", data=to_pdf(df_display), file_name='datos_detallados.pdf', mime='application/pdf', use_container_width=True)
+            # **CAMBIO**: Crear el subconjunto de datos para el PDF
+            pdf_summary_cols = ['Nro. de Legajo', 'Apellido y Nombres', 'Gerencia', 'Clasificacion_Ministerio', 'Total Mensual']
+            existing_pdf_cols = [col for col in pdf_summary_cols if col in df_display.columns]
+            df_pdf_summary = df_display[existing_pdf_cols]
+            st.download_button(
+                label="📥 PDF (Resumen)", # **CAMBIO**: Etiqueta actualizada
+                data=to_pdf(df_pdf_summary),
+                file_name='resumen_detallado.pdf',
+                mime='application/pdf',
+                use_container_width=True
+            )
         st.write("")
-        
-        # Lógica de Paginación
-        if 'page_number' not in st.session_state:
-            st.session_state.page_number = 0
-        
+        if 'page_number' not in st.session_state: st.session_state.page_number = 0
         PAGE_SIZE = 50
         total_rows = len(df_display)
         num_pages = (total_rows // PAGE_SIZE) + (1 if total_rows % PAGE_SIZE > 0 else 0)
-
         st.write(f"Mostrando **{PAGE_SIZE}** filas por página. Total de filas: **{total_rows}**.")
         prev_col, page_col, next_col = st.columns([2, 8, 2])
         if prev_col.button("⬅️ Anterior", use_container_width=True):
-            if st.session_state.page_number > 0:
-                st.session_state.page_number -= 1
+            if st.session_state.page_number > 0: st.session_state.page_number -= 1
         if next_col.button("Siguiente ➡️", use_container_width=True):
-            if st.session_state.page_number < num_pages - 1:
-                st.session_state.page_number += 1
+            if st.session_state.page_number < num_pages - 1: st.session_state.page_number += 1
         page_col.write(f"Página **{st.session_state.page_number + 1}** de **{num_pages}**")
-
-        # Cortar el dataframe a la página actual
         start_idx = st.session_state.page_number * PAGE_SIZE
         end_idx = min(start_idx + PAGE_SIZE, total_rows)
         df_page = df_display.iloc[start_idx:end_idx]
-        
-        # Reutilizar st.dataframe (que es rápido) en la porción pequeña de datos
         currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
         integer_columns = ['Nro. de Legajo', 'Dotación']
         format_mapper = {col: "${:,.2f}" for col in currency_columns if col in df_page.columns}
         for col in integer_columns:
-            if col in df_page.columns:
-                format_mapper[col] = "{:,.0f}"
+            if col in df_page.columns: format_mapper[col] = "{:,.0f}"
         columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_page.columns]
         st.dataframe(df_page.style.format(format_mapper, na_rep="").set_properties(subset=columns_to_align_right, **{'text-align': 'right'}), use_container_width=True, hide_index=True)
-    # --- TERMINA LA SOLUCIÓN CON PAGINACIÓN ---
-    
-    # --- Resumen Anual (sin cambios) ---
     if summary_df is not None:
         st.markdown("---")
         st.subheader("Resumen de Evolución Anual (Datos de Control)")
