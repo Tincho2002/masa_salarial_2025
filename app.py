@@ -200,6 +200,62 @@ else:
     with col_table3:
         st.dataframe(clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height3)
     st.write("")
+    
+    # --- INICIO: NUEVA TABLA DINÁMICA POR CONCEPTO ---
+    st.markdown("---")
+    st.subheader("Masa Salarial por Concepto")
+
+    # Lista de columnas que representan conceptos monetarios para la tabla dinámica
+    concept_columns_to_pivot = [
+        'Nómina General con Aportes', 'Antigüedad', 'Horas Extras', 'Cs. Sociales s/Remunerativos',
+        'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria',
+        'Gastos de Representación', 'Gratificación por Antigüedad', 'Gratificación por Jubilación',
+        'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado',
+        'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Asignaciones Familiares 1.4.', 'Total Mensual'
+    ]
+    
+    # Filtrar solo las columnas que existen en el dataframe
+    concept_cols_present = [col for col in concept_columns_to_pivot if col in df_filtered.columns]
+
+    if concept_cols_present:
+        # Reestructurar el dataframe para facilitar la creación de la tabla dinámica
+        df_melted = df_filtered.melt(
+            id_vars=['Mes', 'Mes_Num'],
+            value_vars=concept_cols_present,
+            var_name='Concepto',
+            value_name='Monto'
+        )
+
+        # Crear la tabla dinámica
+        pivot_table = pd.pivot_table(
+            df_melted,
+            values='Monto',
+            index='Concepto',
+            columns='Mes',
+            aggfunc='sum',
+            fill_value=0
+        )
+        
+        # Ordenar las columnas de meses cronológicamente
+        meses_en_datos = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
+        if all(mes in pivot_table.columns for mes in meses_en_datos):
+            pivot_table = pivot_table[meses_en_datos]
+
+        # Calcular y añadir la columna de Total General
+        pivot_table['Total general'] = pivot_table.sum(axis=1)
+
+        # Mostrar la tabla en Streamlit
+        st.dataframe(
+            pivot_table.style.format("${:,.2f}", na_rep="").set_properties(
+                **{'text-align': 'right'}
+            ), 
+            use_container_width=True
+        )
+    else:
+        st.info("No hay datos de conceptos para mostrar con los filtros seleccionados.")
+
+    # --- FIN: NUEVA TABLA DINÁMICA POR CONCEPTO ---
+    
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     df_display = df_filtered.copy().reset_index(drop=True)
@@ -211,7 +267,6 @@ else:
         with col_btn2:
             st.download_button(label="📥 Excel (Tabla Completa)", data=to_excel(df_display), file_name='datos_detallados.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
         with col_btn3:
-            # **INICIA CAMBIO PARA PDF**
             pdf_summary_cols = ['Período', 'Nro. de Legajo', 'Apellido y Nombres', 'Gerencia', 'Clasificacion_Ministerio', 'Total Mensual']
             existing_pdf_cols = [col for col in pdf_summary_cols if col in df_display.columns]
             df_pdf_raw = df_display[existing_pdf_cols]
@@ -227,7 +282,6 @@ else:
                 mime='application/pdf',
                 use_container_width=True
             )
-            # **TERMINA CAMBIO PARA PDF**
         st.write("")
         if 'page_number' not in st.session_state: st.session_state.page_number = 0
         PAGE_SIZE = 50
