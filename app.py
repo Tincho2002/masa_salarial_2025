@@ -43,6 +43,21 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
+/* Estilos para la tabla HTML renderizada manualmente */
+.custom-html-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-color);
+}
+.custom-html-table th, .custom-html-table td {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    text-align: left;
+}
+.custom-html-table thead th {
+    background-color: #f0f2f6;
+    font-weight: bold;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -227,7 +242,7 @@ else:
 
     st.markdown("---")
 
-    # --- Sección 2: Masa Salarial por Gerencia ---
+    # --- Sección 2: Masa Salarial por Gerencia (Gráfico a la Izquierda) ---
     st.subheader("Masa Salarial por Gerencia")
     
     col_chart2, col_table2 = st.columns([3, 2])
@@ -290,9 +305,9 @@ else:
     st.subheader("Tabla de Datos Detallados")
     
     # --- SOLUCIÓN DEFINITIVA Y ROBUSTA ---
-    # Se utiliza st.column_config, el método nativo y estable de Streamlit,
-    # con el formato correcto que SÍ incluye separador de miles.
-
+    # Se renderiza la tabla como HTML para un control total del formato,
+    # evitando los errores de los componentes nativos de Streamlit.
+    
     # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
@@ -306,28 +321,31 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # 2. Crear un diccionario de configuración de columnas dinámicamente.
-    column_configuration = {}
-    for col_name in detailed_table_cols:
-        if col_name in df_filtered.columns:
-            column_configuration[col_name] = st.column_config.NumberColumn(
-                label=col_name,
-                format="$ {:,.2f}" # <-- EL FORMATO CORRECTO CON SEPARADOR DE MILES
-            )
-            
-    # Añadir formato para la columna 'Dotación' si existe.
+    # 2. Crear un diccionario de formato para las columnas que existen.
+    formatters = {
+        col: "${:,.2f}"
+        for col in detailed_table_cols if col in df_filtered.columns
+    }
     if 'Dotación' in df_filtered.columns:
-        column_configuration['Dotación'] = st.column_config.NumberColumn(
-            label="Dotación",
-            format="%d"
-        )
+        formatters['Dotación'] = "{:d}"
+
+    # 3. Identificar columnas a alinear a la derecha.
+    columns_to_align_right = [col for col in detailed_table_cols if col in df_filtered.columns]
+    if 'Dotación' in df_filtered.columns:
+        columns_to_align_right.append('Dotación')
     
-    # 3. Mostrar el dataframe con la configuración aplicada.
-    st.dataframe(
-        df_filtered,
-        column_config=column_configuration,
-        use_container_width=True
+    # 4. Aplicar estilos y convertir a HTML.
+    df_styled_html = (
+        df_filtered.style
+        .format(formatters)
+        .set_properties(subset=columns_to_align_right, **{'text-align': 'right'})
+        .hide(axis="index")
+        .to_html(classes="custom-html-table")
     )
+    
+    # 5. Mostrar la tabla HTML dentro de un contenedor con estilo.
+    st.markdown(f'<div class="stDataFrame">{df_styled_html}</div>', unsafe_allow_html=True)
+
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
