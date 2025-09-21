@@ -43,36 +43,6 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
-/* Estilos para la tabla HTML renderizada manualmente */
-.custom-html-table-container {
-    height: 500px; /* Altura fija para la tabla detallada */
-    overflow: auto; /* Scroll en ambas direcciones si es necesario */
-    background-color: var(--secondary-background-color);
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    padding: 0;
-}
-.custom-html-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: var(--text-color);
-}
-.custom-html-table th, .custom-html-table td {
-    padding: 8px 12px;
-    border: 1px solid #e0e0e0;
-    text-align: left;
-    white-space: nowrap;
-}
-.custom-html-table thead th {
-    background-color: #f0f2f6;
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-.numeric-cell {
-    text-align: right !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
