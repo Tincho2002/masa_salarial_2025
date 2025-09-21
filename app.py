@@ -1,14 +1,11 @@
-# app.py (completo y corregido)
-
 import streamlit as st
 import pandas as pd
-import numpy as np
 import altair as alt
 
 # --- Configuración de la página ---
-st.set_page_config(layout="wide", page_title="Masa Salarial 2025")
+st.set_page_config(layout="wide")
 
-# --- CSS Personalizado ---
+# --- CSS Personalizado para un Estilo Profesional ---
 st.markdown("""
 <style>
 :root {
@@ -26,6 +23,7 @@ body, .stApp {
     background-color: var(--secondary-background-color);
     border-right: 1px solid #e0e0e0;
 }
+/* Estilo para contenedores de métricas y tablas */
 [data-testid="stMetric"], .stDataFrame {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
@@ -33,38 +31,17 @@ body, .stApp {
     border-radius: 10px !important;
     padding: 20px;
 }
+/* SOLUCIÓN DEFINITIVA: Estilo del contenedor del gráfico */
 div[data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-radius: 10px !important;
-    overflow: hidden !important;
+    overflow: hidden !important; /* Obliga al contenido a respetar los bordes redondeados */
 }
 h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
-}
-.custom-html-table-container {
-    height: 500px;
-    overflow: auto;
-}
-.custom-html-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: var(--text-color);
-}
-.custom-html-table th, .custom-html-table td {
-    padding: 8px 12px;
-    border: 1px solid #e0e0e0;
-    text-align: left;
-    white-space: nowrap;
-}
-.custom-html-table thead th {
-    background-color: #f0f2f6;
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-    z-index: 1;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -97,7 +74,7 @@ def load_data(url):
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        # Lista exhaustiva de columnas monetarias (se convierten a numéricas)
+        # Lista exhaustiva de todas las columnas de moneda
         currency_cols = [
             'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
             'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -110,6 +87,7 @@ def load_data(url):
             'Asignaciones Familiares 1.4.', 'Total Mensual'
         ]
         
+        # Se convierte cada columna a numérica, si existe en el dataframe
         for col in currency_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -120,13 +98,11 @@ def load_data(url):
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
-        # si alguna de estas columnas no existe se evita el dropna sobre columnas inexistentes
-        existing_key_cols = [c for c in key_filter_columns if c in df.columns]
-        if existing_key_cols:
-            df.dropna(subset=existing_key_cols, inplace=True)
+        df.dropna(subset=key_filter_columns, inplace=True)
 
-        for col in existing_key_cols:
-            df[col] = df[col].astype(str).str.strip()
+        for col in key_filter_columns:
+            if col in df.columns:
+                df[col] = df[col].astype(str).str.strip()
         
         if 'Nro. de Legajo' in df.columns:
              df['Nro. de Legajo'] = df['Nro. de Legajo'].astype(str).str.strip()
@@ -146,7 +122,6 @@ def load_summary_data(url):
         summary_df = pd.read_excel(url, sheet_name='Evolución Anual', header=3, index_col=0, engine='openpyxl')
         summary_df.dropna(how='all', axis=0, inplace=True)
         summary_df.dropna(how='all', axis=1, inplace=True)
-        # quitar fila 'Total general' si existe (índice)
         if 'Total general' in summary_df.index:
             summary_df = summary_df.drop('Total general')
         summary_df.index.name = 'Mes'
@@ -166,60 +141,52 @@ if df.empty:
 # --- Título del Dashboard ---
 st.title('📊 Dashboard de Masa Salarial 2025')
 st.markdown("Análisis interactivo de los costos de la mano de obra de la compañía.")
-
+    
 # --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
 
-# Verificaciones para columnas que podrían faltar
-def safe_unique(colname):
-    return sorted(df[colname].dropna().unique().tolist()) if colname in df.columns else []
-
-gerencia_options = safe_unique('Gerencia')
+gerencia_options = sorted(df['Gerencia'].unique())
 selected_gerencia = st.sidebar.multiselect('Gerencia', options=gerencia_options, default=gerencia_options)
 
-nivel_options = safe_unique('Nivel')
+nivel_options = sorted(df['Nivel'].unique())
 selected_nivel = st.sidebar.multiselect('Nivel', options=nivel_options, default=nivel_options)
 
-clasificacion_options = safe_unique('Clasificacion_Ministerio')
+clasificacion_options = sorted(df['Clasificacion_Ministerio'].unique())
 selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=clasificacion_options, default=clasificacion_options)
 
-relacion_options = safe_unique('Relación')
+relacion_options = sorted(df['Relación'].unique())
 selected_relacion = st.sidebar.multiselect('Relación', options=relacion_options, default=relacion_options)
 
-meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique().tolist() if 'Mes_Num' in df.columns else []
+meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique().tolist()
 selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=meses_ordenados)
 
-# --- Aplicar filtros de forma robusta ---
-df_filtered = df.copy()
-if 'Gerencia' in df.columns:
-    df_filtered = df_filtered[df_filtered['Gerencia'].isin(selected_gerencia)]
-if 'Nivel' in df.columns:
-    df_filtered = df_filtered[df_filtered['Nivel'].isin(selected_nivel)]
-if 'Clasificacion_Ministerio' in df.columns:
-    df_filtered = df_filtered[df_filtered['Clasificacion_Ministerio'].isin(selected_clasificacion)]
-if 'Relación' in df.columns:
-    df_filtered = df_filtered[df_filtered['Relación'].isin(selected_relacion)]
-if 'Mes' in df.columns:
-    df_filtered = df_filtered[df_filtered['Mes'].isin(selected_mes)]
+
+# --- Aplicar filtros ---
+df_filtered = df[
+    df['Gerencia'].isin(selected_gerencia) &
+    df['Nivel'].isin(selected_nivel) &
+    df['Clasificacion_Ministerio'].isin(selected_clasificacion) &
+    df['Relación'].isin(selected_relacion) &
+    df['Mes'].isin(selected_mes)
+]
 
 # --- KPIs Principales ---
-total_masa_salarial = df_filtered['Total Mensual'].sum() if 'Total Mensual' in df_filtered.columns else 0
+total_masa_salarial = df_filtered['Total Mensual'].sum()
 cantidad_empleados = 0
 latest_month_name = "N/A"
 
-if not df_filtered.empty and 'Mes_Num' in df_filtered.columns:
+if not df_filtered.empty:
     latest_month_num = df_filtered['Mes_Num'].max()
     df_latest_month = df_filtered[df_filtered['Mes_Num'] == latest_month_num]
-    if 'Dotación' in df_latest_month.columns:
-        cantidad_empleados = df_latest_month['Dotación'].sum()
-    if not df_latest_month.empty and 'Mes' in df_latest_month.columns:
+    cantidad_empleados = df_latest_month['Dotación'].sum()
+    if not df_latest_month.empty:
         latest_month_name = df_latest_month['Mes'].iloc[0]
 
 costo_medio = total_masa_salarial / cantidad_empleados if cantidad_empleados > 0 else 0
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Masa Salarial Total (Período)", f"${total_masa_salarial:,.2f}")
-col2.metric(f"Empleados ({latest_month_name})", f"{int(cantidad_empleados):,d}")
+col2.metric(f"Empleados ({latest_month_name})", f"{int(cantidad_empleados)}")
 col3.metric("Costo Medio por Empleado (Período)", f"${costo_medio:,.2f}")
     
 st.markdown("---")
@@ -240,6 +207,7 @@ else:
             y=alt.Y('Total Mensual:Q',
                     title='Masa Salarial ($)',
                     axis=alt.Axis(format='$,.0s'),
+                    scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)
                    ),
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
@@ -251,10 +219,10 @@ else:
         st.altair_chart(line_chart, use_container_width=True)
     
     with col_table1:
-        # Para tablas pequeñas: convertimos columna a string formateada y mostramos con st.dataframe (mantiene scroll)
-        masa_mensual_display = masa_mensual[['Mes', 'Total Mensual']].copy()
-        masa_mensual_display['Total Mensual'] = masa_mensual_display['Total Mensual'].map('${:,.2f}'.format)
-        st.dataframe(masa_mensual_display.reset_index(drop=True), use_container_width=True, height=chart_height1 - 10)
+        masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1 - 10)
 
     st.markdown("---")
 
@@ -282,9 +250,10 @@ else:
         st.altair_chart(bar_chart, use_container_width=True)
         
     with col_table2:
-        gerencia_display = gerencia_data.copy()
-        gerencia_display['Total Mensual'] = gerencia_display['Total Mensual'].map('${:,.2f}'.format)
-        st.dataframe(gerencia_display.reset_index(drop=True), use_container_width=True, height=chart_height2 - 10)
+        gerencia_data_styled = gerencia_data.style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(gerencia_data_styled, use_container_width=True, height=chart_height2 - 10)
 
     st.markdown("---")
 
@@ -308,15 +277,26 @@ else:
         st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
-        clasificacion_display = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy()
-        clasificacion_display['Total Mensual'] = clasificacion_display['Total Mensual'].map('${:,.2f}'.format)
-        st.dataframe(clasificacion_display.reset_index(drop=True), use_container_width=True, height=chart_height3 - 10)
+        clasificacion_data_styled = clasificacion_data.rename(
+            columns={'Clasificacion_Ministerio': 'Clasificación'}
+        ).style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(clasificacion_data_styled, use_container_width=True, height=chart_height3 - 10)
 
 
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- Tabla Detallada: usamos Styler + to_html() para preservar formato sin romper Streamlit ---
+    # --- SOLUCIÓN FINAL Y DEFINITIVA ---
+    # El método inestable de styler se reemplaza por uno más robusto:
+    # 1. Se crea una copia del dataframe para modificarla.
+    # 2. Se pre-formatean los números a strings con el formato correcto.
+    # 3. Se aplica un estilo simple de alineación, que es una operación estable.
+    
+    df_display = df_filtered.copy()
+
+    # Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -329,57 +309,38 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # Crear diccionario de formato SOLO para las columnas que existen
-    formatters = {col: "${:,.2f}" for col in detailed_table_cols if col in df_filtered.columns}
-    # Dotación sin decimales (si existe)
-    if 'Dotación' in df_filtered.columns:
-        formatters['Dotación'] = "{:,.0f}"
-    
-    # Columnas a alinear a la derecha
-    columns_to_align_right = [col for col in detailed_table_cols if col in df_filtered.columns]
-    if 'Dotación' in df_filtered.columns:
+    # Pre-formatear las columnas de moneda a strings
+    for col in detailed_table_cols:
+        if col in df_display.columns:
+            df_display[col] = df_display[col].map(lambda x: f"${x:,.2f}")
+
+    # Identificar las columnas a alinear a la derecha.
+    columns_to_align_right = [col for col in detailed_table_cols if col in df_display.columns]
+    if 'Dotación' in df_display.columns:
         columns_to_align_right.append('Dotación')
 
-    # Aplicar Styler
-    try:
-        df_styled = df_filtered.style.format(formatters).set_properties(
-            subset=columns_to_align_right, **{'text-align': 'right'}
-        ).hide(axis="index")
-        # Mostrar como HTML para evitar incompatibilidades con st.dataframe/st.write en algunas versiones de Streamlit
-        st.markdown(df_styled.to_html(), unsafe_allow_html=True)
-    except Exception as e:
-        # Fallback: convertir numéricos a strings formateadas y usar st.dataframe
-        df_fallback = df_filtered.copy()
-        num_cols = df_fallback.select_dtypes(include=[np.number]).columns.tolist()
-        for c in num_cols:
-            if c == 'Dotación':
-                df_fallback[c] = df_fallback[c].map('{:,.0f}'.format)
-            else:
-                df_fallback[c] = df_fallback[c].map('${:,.2f}'.format)
-        st.dataframe(df_fallback, use_container_width=True)
+    # Aplicar SOLO la alineación con el Styler.
+    df_styled = df_display.style.set_properties(
+        subset=columns_to_align_right, **{'text-align': 'right'}
+    )
+    
+    st.dataframe(
+        df_styled,
+        use_container_width=True
+    )
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    # Mostrar tabla de resumen formateada
-    try:
-        summary_formatters = {
-            col: "${:,.2f}"
-            for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
-        }
-        st.markdown(summary_df.style.format(summary_formatters).to_html(), unsafe_allow_html=True)
-    except Exception:
-        # Fallback: formato string + st.dataframe
-        s_df = summary_df.copy().reset_index()
-        num_cols = s_df.select_dtypes(include=[np.number]).columns.tolist()
-        for c in num_cols:
-            s_df[c] = s_df[c].map('${:,.2f}'.format)
-        st.dataframe(s_df, use_container_width=True)
-
-    # Preparar datos para gráfico
-    summary_chart_data = summary_df.reset_index().melt(
+    summary_formatters = {
+        col: "${:,.2f}"
+        for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
+    }
+    st.dataframe(summary_df.style.format(summary_formatters), use_container_width=True)
+    
+    summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
         id_vars='Mes',
         var_name='Clasificacion',
         value_name='Masa Salarial'
@@ -401,3 +362,4 @@ if summary_df is not None:
         fill='transparent'
     )
     st.altair_chart(summary_chart, use_container_width=True)
+
