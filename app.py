@@ -43,6 +43,36 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
+/* Estilos para la tabla HTML renderizada manualmente */
+.custom-html-table-container {
+    height: 500px; /* Altura fija para la tabla detallada */
+    overflow: auto; /* Scroll en ambas direcciones si es necesario */
+    background-color: var(--secondary-background-color);
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0;
+}
+.custom-html-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-color);
+}
+.custom-html-table th, .custom-html-table td {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    text-align: left;
+    white-space: nowrap;
+}
+.custom-html-table thead th {
+    background-color: #f0f2f6;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.numeric-cell {
+    text-align: right !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -289,11 +319,13 @@ else:
     st.subheader("Tabla de Datos Detallados")
     
     # --- SOLUCIÓN FINAL ---
-    # Se utiliza st.column_config, que es el método nativo y estable de Streamlit,
-    # con el formato correcto que SÍ incluye separador de miles.
+    # Se renderiza la tabla como HTML para un control total del formato,
+    # evitando los errores de los componentes nativos de Streamlit.
     
-    # 1. Lista de todas las columnas que deben tener formato de moneda.
-    detailed_table_cols = [
+    df_display = df_filtered.copy()
+
+    # Lista de todas las columnas de moneda
+    currency_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
         'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.',
@@ -304,29 +336,36 @@ else:
         'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
-    
-    # 2. Crear un diccionario de configuración de columnas dinámicamente.
-    column_configuration = {}
-    for col_name in detailed_table_cols:
-        if col_name in df_filtered.columns:
-            column_configuration[col_name] = st.column_config.NumberColumn(
-                label=col_name,
-                format="$ {:,.2f}" # <-- EL FORMATO CORRECTO CON SEPARADOR DE MILES
-            )
+
+    # Generar el HTML de la tabla manualmente
+    html = '<div class="stDataFrame custom-html-table-container"><table class="custom-html-table"><thead><tr>'
+    for col in df_display.columns:
+        html += f'<th>{col}</th>'
+    html += '</tr></thead><tbody>'
+
+    for index, row in df_display.iterrows():
+        html += '<tr>'
+        for col_name, cell_value in row.items():
+            is_numeric = False
+            if col_name in currency_cols:
+                cell_content = f"${cell_value:,.2f}"
+                is_numeric = True
+            elif col_name == 'Dotación':
+                cell_content = f"{int(cell_value)}"
+                is_numeric = True
+            else:
+                cell_content = str(cell_value)
             
-    # Añadir formato para la columna 'Dotación' si existe.
-    if 'Dotación' in df_filtered.columns:
-        column_configuration['Dotación'] = st.column_config.NumberColumn(
-            label="Dotación",
-            format="%d"
-        )
+            if is_numeric:
+                html += f'<td class="numeric-cell">{cell_content}</td>'
+            else:
+                html += f'<td>{cell_content}</td>'
+        html += '</tr>'
     
-    # 3. Mostrar el dataframe con la configuración aplicada.
-    st.dataframe(
-        df_filtered,
-        column_config=column_configuration,
-        use_container_width=True
-    )
+    html += '</tbody></table></div>'
+    
+    st.markdown(html, unsafe_allow_html=True)
+
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
