@@ -312,9 +312,8 @@ else:
     st.subheader("Tabla de Datos Detallados")
     
     # --- SOLUCIÓN FINAL ---
-    # Se utiliza el método que funciona en las otras tablas: Styler de Pandas.
-    # El error anterior se debía a una incompatibilidad específica que se resuelve
-    # al aplicar el formato de manera controlada.
+    # Se renderiza la tabla como HTML para un control total del formato,
+    # evitando los errores de los componentes nativos de Streamlit.
     
     # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
@@ -329,31 +328,31 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # 2. Crear un diccionario de formato para las columnas que existen en el dataframe.
+    # 2. Crear un diccionario de formato para las columnas que existen.
     formatters = {
-        col: "${:,.2f}" # <-- El formato correcto con separador de miles
+        col: "${:,.2f}"
         for col in detailed_table_cols if col in df_filtered.columns
     }
-    
-    # Añadir formato para la columna 'Dotación' si existe, sin decimales.
     if 'Dotación' in df_filtered.columns:
-        formatters['Dotación'] = "{:,.0f}"
+        formatters['Dotación'] = "{:d}"
 
-    # 3. Identificar las columnas a alinear a la derecha.
+    # 3. Identificar columnas a alinear a la derecha.
     columns_to_align_right = [col for col in detailed_table_cols if col in df_filtered.columns]
     if 'Dotación' in df_filtered.columns:
         columns_to_align_right.append('Dotación')
-
-    # 4. Aplicar el formato y la alineación con el Styler.
-    df_styled = df_filtered.style.format(formatters).set_properties(
-        subset=columns_to_align_right, **{'text-align': 'right'}
+    
+    # 4. Aplicar estilos y convertir a HTML.
+    df_styled_html = (
+        df_filtered.style
+        .format(formatters)
+        .set_properties(subset=columns_to_align_right, **{'text-align': 'right'})
+        .hide(axis="index")
+        .to_html(classes="custom-html-table")
     )
     
-    # 5. Mostrar el dataframe estilizado.
-    try:
-        st.dataframe(df_styled, use_container_width=True)
-    except Exception:
-        st.markdown(df_styled.to_html(), unsafe_allow_html=True)
+    # 5. Mostrar la tabla HTML dentro de un contenedor con estilo.
+    st.markdown(f'<div class="stDataFrame custom-html-table-container">{df_styled_html}</div>', unsafe_allow_html=True)
+
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
@@ -388,3 +387,4 @@ if summary_df is not None:
         fill='transparent'
     )
     st.altair_chart(summary_chart, use_container_width=True)
+
