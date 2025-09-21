@@ -43,6 +43,12 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
+
+/* --- SOLUCIÓN DE ALINEACIÓN --- */
+/* Fuerza la alineación del texto a la derecha en las celdas de la tabla de datos */
+.stDataFrame table td {
+    text-align: right;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -302,7 +308,10 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN CON FORMATO Y ALINEACIÓN ---
+    # --- SOLUCIÓN ROBUSTA PARA FORMATEO Y ALINEACIÓN ---
+    # Se crea una copia para no alterar el dataframe original
+    df_display = df_filtered.copy()
+
     # Columnas que necesitan formato de moneda
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
@@ -316,22 +325,14 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # Crear un diccionario de formato para las columnas de moneda
-    formatter = {
-        col: "${:,.2f}" for col in detailed_table_cols if col in df_filtered.columns
-    }
-    
-    # Filtrar la lista de columnas para alinear solo las que realmente existen
-    cols_to_align = [col for col in detailed_table_cols if col in df_filtered.columns]
+    # Se aplica el formato directamente a los datos, convirtiéndolos en texto
+    for col_name in detailed_table_cols:
+        if col_name in df_display.columns:
+            df_display[col_name] = df_display[col_name].map('${:,.2f}'.format)
 
-    # Aplicar el formato y la alineación usando .style
-    styler = df_filtered.style.format(formatter).set_properties(
-        subset=cols_to_align, **{'text-align': 'right'}
-    )
-
-    # Mostrar el dataframe con estilo
+    # Se muestra la tabla con los datos ya formateados. La alineación se controla con el CSS de arriba.
     st.dataframe(
-        styler,
+        df_display,
         use_container_width=True
     )
 
