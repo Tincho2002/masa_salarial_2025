@@ -221,7 +221,7 @@ else:
         bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None,
-                    axis=alt.Axis(labelLimit=120)
+                    axis=alt.Axis(labelLimit=120) # Blindaje contra desborde de texto
                    ),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
