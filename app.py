@@ -247,23 +247,26 @@ else:
     currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
     integer_columns = ['Nro. de Legajo', 'Dotación']
 
-    # **INICIA LA CORRECCIÓN PUNTUAL**
+    # **INICIA LA CORRECCIÓN**
+    # Convertir la columna Int64 a float para evitar el error del Styler con valores nulos (pd.NA)
+    if 'Nro. de Legajo' in df_display.columns:
+        df_display['Nro. de Legajo'] = pd.to_numeric(df_display['Nro. de Legajo'], errors='coerce').astype('float')
+    
     format_mapper = {}
-    # Mantener el formato simple para columnas de moneda
     for col in currency_columns:
         if col in df_display.columns:
             format_mapper[col] = "${:,.2f}"
     
-    # Usar una función lambda más segura para columnas de enteros que pueden ser nulas
+    # Ahora el formato de string simple funciona porque la columna es float
     for col in integer_columns:
         if col in df_display.columns:
-            format_mapper[col] = lambda x: f"{int(x):,}" if pd.notna(x) else ""
-    # **TERMINA LA CORRECCIÓN PUNTUAL**
+            format_mapper[col] = "{:,.0f}"
+    # **TERMINA LA CORRECCIÓN**
     
     columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_display.columns]
 
     st.dataframe(
-        df_display.style.format(format_mapper) # Ya no se necesita na_rep="", la lambda lo maneja
+        df_display.style.format(format_mapper, na_rep="")
                         .set_properties(subset=columns_to_align_right, **{'text-align': 'right'}),
         use_container_width=True
     )
