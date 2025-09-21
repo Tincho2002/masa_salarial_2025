@@ -302,10 +302,7 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN ROBUSTA PARA FORMATEO ---
-    # Se crea una copia para no alterar el dataframe original (usado en otros cálculos)
-    df_display = df_filtered.copy()
-
+    # --- SOLUCIÓN CON FORMATO Y ALINEACIÓN ---
     # Columnas que necesitan formato de moneda
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
@@ -319,15 +316,22 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # Se aplica el formato directamente en los datos.
-    # ADVERTENCIA: Esto convierte las columnas a texto, por lo que el ordenamiento numérico en la UI dejará de funcionar.
-    for col_name in detailed_table_cols:
-        if col_name in df_display.columns:
-            df_display[col_name] = df_display[col_name].map('${:,.2f}'.format)
+    # Crear un diccionario de formato para las columnas de moneda
+    formatter = {
+        col: "${:,.2f}" for col in detailed_table_cols if col in df_filtered.columns
+    }
+    
+    # Filtrar la lista de columnas para alinear solo las que realmente existen
+    cols_to_align = [col for col in detailed_table_cols if col in df_filtered.columns]
 
-    # Se muestra la tabla con los datos ya formateados como texto.
+    # Aplicar el formato y la alineación usando .style
+    styler = df_filtered.style.format(formatter).set_properties(
+        subset=cols_to_align, **{'text-align': 'right'}
+    )
+
+    # Mostrar el dataframe con estilo
     st.dataframe(
-        df_display,
+        styler,
         use_container_width=True
     )
 
