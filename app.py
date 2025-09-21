@@ -74,8 +74,11 @@ def load_data(url):
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        for col in ['Total Mensual', 'Dotación']:
-            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        # MODIFICACIÓN: Añadir todas las columnas de moneda a la conversión numérica
+        currency_cols = ['Total Mensual', 'Dotación', 'Total Sujeto a Retención']
+        for col in currency_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
@@ -194,7 +197,6 @@ else:
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height1,
-            # SOLUCIÓN DEFINITIVA: Padding interno con el formato correcto
             padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
         ).configure_view(
             fill='transparent'
@@ -226,7 +228,6 @@ else:
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height2,
-            # SOLUCIÓN DEFINITIVA: Padding interno con el formato correcto
             padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
         ).configure_view(
             fill='transparent'
@@ -254,7 +255,6 @@ else:
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height3,
-            # SOLUCIÓN DEFINITIVA: Padding interno con el formato correcto
             padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
         ).configure_view(
             fill='transparent'
@@ -272,12 +272,17 @@ else:
 
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
+    # MODIFICACIÓN: Aplicar formato de moneda a las columnas relevantes
     st.dataframe(
         df_filtered,
         column_config={
             "Total Mensual": st.column_config.NumberColumn(
                 "Total Mensual ($)",
-                format="$ %.2f",
+                format="$ {:,.2f}",
+            ),
+            "Total Sujeto a Retención": st.column_config.NumberColumn(
+                "Total Sujeto a Retención ($)",
+                format="$ {:,.2f}",
             ),
             "Dotación": st.column_config.NumberColumn(
                 "Dotación",
@@ -315,7 +320,6 @@ if summary_df is not None:
         ]
     ).properties(
         height=350,
-        # SOLUCIÓN DEFINITIVA: Padding interno con el formato correcto
         padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
     ).configure_view(
         fill='transparent'
