@@ -73,8 +73,8 @@ def to_pdf(df):
             pdf.cell(col_width, 10, cell_text, border=1)
         pdf.ln()
     
-    # **CAMBIO**: La versión moderna de fpdf2 genera bytes directamente
-    return pdf.output()
+    # **CAMBIO**: Convertir explícitamente la salida a bytes
+    return bytes(pdf.output())
 
 # --- CARGA DE DATOS ---
 @st.cache_data
@@ -227,7 +227,7 @@ else:
         with col_btn1:
             st.download_button(
                 label="📥 Descargar como CSV",
-                data=df_display.to_csv(index=False).encode('utf-8'), # **CAMBIO**
+                data=df_display.to_csv(index=False).encode('utf-8'), 
                 file_name='datos_detallados.csv',
                 mime='text/csv',
                 use_container_width=True
