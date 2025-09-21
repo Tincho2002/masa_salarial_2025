@@ -43,6 +43,32 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
+/* Estilos para la tabla HTML renderizada manualmente */
+.custom-html-table-container {
+    height: 500px; /* Altura fija para la tabla detallada */
+    overflow: auto; /* Scroll en ambas direcciones si es necesario */
+}
+.custom-html-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-color);
+}
+.custom-html-table th, .custom-html-table td {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    text-align: left;
+    white-space: nowrap;
+}
+.custom-html-table thead th {
+    background-color: #f0f2f6;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.numeric-cell {
+    text-align: right !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -289,8 +315,8 @@ else:
     st.subheader("Tabla de Datos Detallados")
     
     # --- SOLUCIÓN FINAL ---
-    # Se utiliza st.column_config, que es el método nativo y estable de Streamlit,
-    # con el formato correcto que SÍ incluye separador de miles.
+    # Se utiliza el Styler de Pandas, el mismo método que en las tablas de resumen,
+    # que es el criterio correcto, estable y unificado.
     
     # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
@@ -305,26 +331,29 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # 2. Crear un diccionario de configuración de columnas dinámicamente.
-    column_configuration = {}
-    for col_name in detailed_table_cols:
-        if col_name in df_filtered.columns:
-            column_configuration[col_name] = st.column_config.NumberColumn(
-                label=col_name,
-                format="$ {:,.2f}" # <-- EL FORMATO CORRECTO CON SEPARADOR DE MILES
-            )
-            
-    # Añadir formato para la columna 'Dotación' si existe.
-    if 'Dotación' in df_filtered.columns:
-        column_configuration['Dotación'] = st.column_config.NumberColumn(
-            label="Dotación",
-            format="%d"
-        )
+    # 2. Crear un diccionario de formato para las columnas que existen en el dataframe.
+    formatters = {
+        col: "${:,.2f}" # <-- El formato correcto con separador de miles
+        for col in detailed_table_cols if col in df_filtered.columns
+    }
     
-    # 3. Mostrar el dataframe con la configuración aplicada.
+    # Añadir formato para la columna 'Dotación' si existe, sin decimales.
+    if 'Dotación' in df_filtered.columns:
+        formatters['Dotación'] = "{:d}"
+
+    # 3. Identificar las columnas a alinear a la derecha.
+    columns_to_align_right = [col for col in detailed_table_cols if col in df_filtered.columns]
+    if 'Dotación' in df_filtered.columns:
+        columns_to_align_right.append('Dotación')
+
+    # 4. Aplicar el formato y la alineación con el Styler.
+    df_styled = df_filtered.style.format(formatters).set_properties(
+        subset=columns_to_align_right, **{'text-align': 'right'}
+    )
+    
+    # 5. Mostrar el dataframe estilizado.
     st.dataframe(
-        df_filtered,
-        column_config=column_configuration,
+        df_styled,
         use_container_width=True
     )
 
