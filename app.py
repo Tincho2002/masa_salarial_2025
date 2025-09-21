@@ -290,10 +290,10 @@ else:
     st.subheader("Tabla de Datos Detallados")
     
     # --- SOLUCIÓN DEFINITIVA Y ROBUSTA ---
-    # 1. Crear una copia del dataframe para no alterar el original que usan los cálculos.
-    df_display = df_filtered.copy()
+    # Se aplica el formato y la alineación usando el Styler de Pandas,
+    # que es el criterio correcto para datos numéricos.
 
-    # 2. Lista de todas las columnas que deben tener formato de moneda.
+    # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -306,16 +306,26 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # 3. Pre-formatear los números convirtiéndolos a texto con el formato deseado.
-    for col in detailed_table_cols:
-        if col in df_display.columns:
-            # Se asegura que la columna sea numérica antes de aplicar el formato
-            if pd.api.types.is_numeric_dtype(df_display[col]):
-                 df_display[col] = df_display[col].apply(lambda x: f"${x:,.2f}")
+    # 2. Crear un diccionario de formato para las columnas que existen en el dataframe.
+    formatters = {
+        col: "${:,.2f}"
+        for col in detailed_table_cols if col in df_filtered.columns
+    }
+    
+    # Añadir formato para la columna 'Dotación' si existe.
+    if 'Dotación' in df_filtered.columns:
+        formatters['Dotación'] = "{:d}"
 
-    # 4. Mostrar el dataframe ya formateado, que ahora es solo texto y no puede fallar.
+    # 3. Identificar las columnas a alinear y aplicar el estilo.
+    columns_to_align = [col for col in detailed_table_cols if col in df_filtered.columns]
+    
+    df_styled = df_filtered.style.format(formatters).set_properties(
+        subset=columns_to_align, **{'text-align': 'right'}
+    )
+    
+    # 4. Mostrar el dataframe estilizado.
     st.dataframe(
-        df_display,
+        df_styled,
         use_container_width=True
     )
 
