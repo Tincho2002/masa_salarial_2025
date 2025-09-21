@@ -289,9 +289,11 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # MODIFICACIÓN: Usar styler para un formato más robusto
-    
-    # Lista de todas las columnas que deben tener formato de moneda
+    # --- SOLUCIÓN DEFINITIVA Y ROBUSTA ---
+    # 1. Crear una copia del dataframe para no alterar el original que usan los cálculos.
+    df_display = df_filtered.copy()
+
+    # 2. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -304,18 +306,16 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # Crear un diccionario de formato para las columnas que existen en el dataframe
-    formatters = {
-        col: "${:,.2f}"
-        for col in detailed_table_cols if col in df_filtered.columns
-    }
-    
-    # Añadir formato para la columna 'Dotación' si existe
-    if 'Dotación' in df_filtered.columns:
-        formatters['Dotación'] = "{:d}"
+    # 3. Pre-formatear los números convirtiéndolos a texto con el formato deseado.
+    for col in detailed_table_cols:
+        if col in df_display.columns:
+            # Se asegura que la columna sea numérica antes de aplicar el formato
+            if pd.api.types.is_numeric_dtype(df_display[col]):
+                 df_display[col] = df_display[col].apply(lambda x: f"${x:,.2f}")
 
+    # 4. Mostrar el dataframe ya formateado, que ahora es solo texto y no puede fallar.
     st.dataframe(
-        df_filtered.style.format(formatters),
+        df_display,
         use_container_width=True
     )
 
