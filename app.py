@@ -220,10 +220,16 @@ else:
         st.altair_chart(line_chart, use_container_width=True)
     
     with col_table1:
-        masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
-            "Total Mensual": "${:,.2f}"
-        }).hide(axis="index")
-        st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1 - 10)
+        # CORREGIDO: Usar st.column_config para formatear la tabla
+        st.dataframe(
+            masa_mensual[['Mes', 'Total Mensual']],
+            column_config={
+                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
+            },
+            hide_index=True,
+            use_container_width=True,
+            height=chart_height1 - 10
+        )
 
     st.markdown("---")
 
@@ -251,10 +257,16 @@ else:
         st.altair_chart(bar_chart, use_container_width=True)
         
     with col_table2:
-        gerencia_data_styled = gerencia_data.style.format({
-            "Total Mensual": "${:,.2f}"
-        }).hide(axis="index")
-        st.dataframe(gerencia_data_styled, use_container_width=True, height=chart_height2 - 10)
+        # CORREGIDO: Usar st.column_config para formatear la tabla
+        st.dataframe(
+            gerencia_data,
+            column_config={
+                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
+            },
+            hide_index=True,
+            use_container_width=True,
+            height=chart_height2 - 10
+        )
 
     st.markdown("---")
 
@@ -278,18 +290,21 @@ else:
         st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
-        clasificacion_data_styled = clasificacion_data.rename(
-            columns={'Clasificacion_Ministerio': 'Clasificación'}
-        ).style.format({
-            "Total Mensual": "${:,.2f}"
-        }).hide(axis="index")
-        st.dataframe(clasificacion_data_styled, use_container_width=True, height=chart_height3 - 10)
+        # CORREGIDO: Usar st.column_config para formatear la tabla
+        st.dataframe(
+            clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}),
+            column_config={
+                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
+            },
+            hide_index=True,
+            use_container_width=True,
+            height=chart_height3 - 10
+        )
 
 
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN DEFINITIVA Y ROBUSTA ---
     # Se utiliza st.column_config, que es el método nativo de Streamlit
     # para formatear y alinear columnas de forma estable.
 
@@ -334,11 +349,12 @@ if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    summary_formatters = {
-        col: "${:,.2f}"
+    # CORREGIDO: Usar st.column_config para formatear la tabla de resumen
+    summary_column_config = {
+        col: st.column_config.NumberColumn(format="$ {:,.2f}")
         for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
     }
-    st.dataframe(summary_df.style.format(summary_formatters), use_container_width=True)
+    st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
     
     summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
         id_vars='Mes',
@@ -362,4 +378,3 @@ if summary_df is not None:
         fill='transparent'
     )
     st.altair_chart(summary_chart, use_container_width=True)
-
