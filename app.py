@@ -244,24 +244,24 @@ else:
     st.subheader("Tabla de Datos Detallados")
     df_display = df_filtered.copy()
     
+    # **INICIA LA CORRECCIÓN DEFINITIVA**
+    # El Styler de Streamlit tiene un bug con el tipo de dato Int64 (entero con nulos).
+    # Este bucle busca TODAS las columnas con ese tipo de dato y las convierte a float, que es un tipo seguro.
+    for col in df_display.select_dtypes(include=['Int64']).columns:
+        df_display[col] = df_display[col].astype(float)
+    # **TERMINA LA CORRECCIÓN DEFINITIVA**
+
     currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
     integer_columns = ['Nro. de Legajo', 'Dotación']
-
-    # **INICIA LA CORRECCIÓN**
-    # Convertir la columna Int64 a float para evitar el error del Styler con valores nulos (pd.NA)
-    if 'Nro. de Legajo' in df_display.columns:
-        df_display['Nro. de Legajo'] = pd.to_numeric(df_display['Nro. de Legajo'], errors='coerce').astype('float')
     
     format_mapper = {}
     for col in currency_columns:
         if col in df_display.columns:
             format_mapper[col] = "${:,.2f}"
     
-    # Ahora el formato de string simple funciona porque la columna es float
     for col in integer_columns:
         if col in df_display.columns:
             format_mapper[col] = "{:,.0f}"
-    # **TERMINA LA CORRECCIÓN**
     
     columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_display.columns]
 
