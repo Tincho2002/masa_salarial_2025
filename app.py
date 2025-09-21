@@ -98,15 +98,11 @@ def load_data(url):
 
         key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
         
-        # **INICIA LA CORRECCIÓN**
-        # Primero, eliminar filas con valores nulos en columnas clave
         df.dropna(subset=key_filter_columns, inplace=True)
         
-        # Después, convertir a string y limpiar espacios
         for col in key_filter_columns:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
-        # **TERMINA LA CORRECCIÓN**
         
         df.reset_index(drop=True, inplace=True)
         return df
@@ -232,31 +228,35 @@ else:
         st.dataframe(clasificacion_data_display.style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height3 - 10)
     
     st.markdown("---")
-    # --- Tabla de Datos Detallados ---
+    # --- Tabla de Datos Detallados (SOLUCIÓN OPTIMIZADA) ---
     st.subheader("Tabla de Datos Detallados")
     df_display = df_filtered.copy()
     
     currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
     integer_columns = ['Nro. de Legajo', 'Dotación']
     
+    # **INICIA LA CORRECCIÓN**
+    # 1. Definir los formatos de manera robusta
     format_mapper = {}
     for col in currency_columns:
         if col in df_display.columns:
-            format_mapper[col] = lambda x: f"${x:,.2f}" if pd.notna(x) else ""
+            format_mapper[col] = "${:,.2f}"
     for col in integer_columns:
         if col in df_display.columns:
-            format_mapper[col] = lambda x: f"{int(x):,}" if pd.notna(x) else ""
+            format_mapper[col] = "{:,.0f}"
     
     columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_display.columns]
 
-    df_formatted = df_display.copy()
-    for col, formatter in format_mapper.items():
-        df_formatted[col] = df_formatted[col].apply(formatter)
-
-    styler = df_formatted.style.set_properties(subset=columns_to_align_right, **{'text-align': 'right'}).hide(axis="index")
+    # 2. Generar el HTML usando el Styler de Pandas de forma optimizada (vectorizada)
+    #    Esto evita el bucle manual lento y el bug de renderizado de Streamlit.
+    styler = df_display.style.format(format_mapper, na_rep="") \
+                             .set_properties(subset=columns_to_align_right, **{'text-align': 'right'}) \
+                             .hide(axis="index")
     html = styler.to_html()
 
+    # 3. Mostrar el HTML
     st.markdown(f'<div class="dataframe-container" style="overflow-x: auto;">{html}</div>', unsafe_allow_html=True)
+    # **TERMINA LA CORRECCIÓN**
     
     # --- Sección de Resumen Anual ---
     if summary_df is not None:
