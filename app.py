@@ -224,7 +224,7 @@ else:
         st.dataframe(
             masa_mensual[['Mes', 'Total Mensual']],
             column_config={
-                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
+                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
             },
             hide_index=True,
             use_container_width=True,
@@ -260,7 +260,7 @@ else:
         st.dataframe(
             gerencia_data,
             column_config={
-                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
+                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
             },
             hide_index=True,
             use_container_width=True,
@@ -292,7 +292,7 @@ else:
         st.dataframe(
             clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}),
             column_config={
-                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
+                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
             },
             hide_index=True,
             use_container_width=True,
@@ -326,7 +326,7 @@ else:
             # Configurar como número con formato de moneda
             column_configuration[col] = st.column_config.NumberColumn(
                 label=col,
-                format="$ {:,.2f}"
+                format="$,.2f"
             )
         elif col in integer_columns:
             # Configurar como número entero
@@ -358,7 +358,7 @@ if summary_df is not None:
         if pd.api.types.is_numeric_dtype(summary_df[col]):
             summary_column_config[col] = st.column_config.NumberColumn(
                 label=col,
-                format="$ {:,.2f}"
+                format="$,.2f"
             )
     
     st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
