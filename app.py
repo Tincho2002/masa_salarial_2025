@@ -24,12 +24,25 @@ body, .stApp {
     border-right: 1px solid #e0e0e0;
 }
 /* Estilo para contenedores de métricas y tablas */
-[data-testid="stMetric"], .stDataFrame {
+[data-testid="stMetric"], .stDataFrame, .dataframe-container {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-radius: 10px !important;
     padding: 20px;
+}
+/* Estilo para la tabla HTML renderizada */
+.dataframe-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.dataframe-container th, .dataframe-container td {
+    border: 1px solid #e0e0e0;
+    padding: 8px;
+    text-align: left;
+}
+.dataframe-container th {
+    background-color: #f0f2f6;
 }
 /* Estilo del contenedor del gráfico */
 div[data-testid="stAltairChart"] {
@@ -42,10 +55,6 @@ div[data-testid="stAltairChart"] {
 h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
-}
-/* SOLUCIÓN DE ALINEACIÓN DEFINITIVA */
-.stDataFrame table tbody td {
-    text-align: right !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -78,7 +87,6 @@ def load_data(url):
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        # Se asegura que las columnas enteras sean del tipo correcto
         if 'Dotación' in df.columns:
             df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
         
@@ -89,11 +97,17 @@ def load_data(url):
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
+        
+        # **INICIA LA CORRECCIÓN**
+        # Primero, eliminar filas con valores nulos en columnas clave
+        df.dropna(subset=key_filter_columns, inplace=True)
+        
+        # Después, convertir a string y limpiar espacios
         for col in key_filter_columns:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
+        # **TERMINA LA CORRECCIÓN**
         
-        df.dropna(subset=key_filter_columns, inplace=True)
         df.reset_index(drop=True, inplace=True)
         return df
     except Exception as e:
@@ -102,9 +116,6 @@ def load_data(url):
 
 @st.cache_data
 def load_summary_data(url):
-    """
-    Carga los datos de resumen de la hoja 'Evolución Anual'.
-    """
     try:
         summary_df = pd.read_excel(url, sheet_name='Evolución Anual', header=3, index_col=0, engine='openpyxl')
         summary_df.dropna(how='all', axis=0, inplace=True)
@@ -172,11 +183,7 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    # --- Formateadores universales ---
-    currency_format = lambda x: f"${x:,.2f}"
-    integer_format = lambda x: f"{int(x):,}" if pd.notna(x) else ""
-
-    # --- Sección 1: Evolución Mensual ---
+    # --- Secciones de gráficos ---
     st.subheader("Evolución Mensual de la Masa Salarial")
     col_chart1, col_table1 = st.columns([2, 1])
     chart_height1 = 350
@@ -186,18 +193,13 @@ else:
             x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
             y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'), scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)),
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(
-            height=chart_height1,
-            padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}  # <-- CAMBIO AQUÍ
-        ).configure_view(fill='transparent')
+        ).properties(height=chart_height1, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure_view(fill='transparent')
         st.altair_chart(line_chart, use_container_width=True)
     with col_table1:
         masa_mensual_display = masa_mensual[['Mes', 'Total Mensual']].copy()
-        masa_mensual_display['Total Mensual'] = masa_mensual_display['Total Mensual'].apply(currency_format)
-        st.dataframe(masa_mensual_display, hide_index=True, use_container_width=True, height=chart_height1 - 10)
+        st.dataframe(masa_mensual_display.style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1 - 10)
 
     st.markdown("---")
-    # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
     col_chart2, col_table2 = st.columns([3, 2])
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
@@ -207,18 +209,13 @@ else:
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelLimit=120)),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(
-            height=chart_height2,
-            padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}  # <-- CAMBIO AQUÍ
-        ).configure_view(fill='transparent')
+        ).properties(height=chart_height2, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure_view(fill='transparent')
         st.altair_chart(bar_chart, use_container_width=True)
     with col_table2:
         gerencia_data_display = gerencia_data.copy()
-        gerencia_data_display['Total Mensual'] = gerencia_data_display['Total Mensual'].apply(currency_format)
-        st.dataframe(gerencia_data_display, hide_index=True, use_container_width=True, height=chart_height2 - 10)
+        st.dataframe(gerencia_data_display.style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height2 - 10)
 
     st.markdown("---")
-    # --- Sección 3: Distribución por Clasificación ---
     st.subheader("Distribución por Clasificación")
     col_chart3, col_table3 = st.columns([2, 1])
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
@@ -228,48 +225,53 @@ else:
             theta=alt.Theta("Total Mensual:Q"),
             color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(
-            height=chart_height3,
-            padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}  # <-- CAMBIO AQUÍ
-        ).configure_view(fill='transparent')
+        ).properties(height=chart_height3, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure_view(fill='transparent')
         st.altair_chart(donut_chart, use_container_width=True)
     with col_table3:
         clasificacion_data_display = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy()
-        clasificacion_data_display['Total Mensual'] = clasificacion_data_display['Total Mensual'].apply(currency_format)
-        st.dataframe(clasificacion_data_display, hide_index=True, use_container_width=True, height=chart_height3 - 10)
-
+        st.dataframe(clasificacion_data_display.style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height3 - 10)
+    
     st.markdown("---")
     # --- Tabla de Datos Detallados ---
     st.subheader("Tabla de Datos Detallados")
     df_display = df_filtered.copy()
+    
     currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
     integer_columns = ['Nro. de Legajo', 'Dotación']
+    
+    format_mapper = {}
     for col in currency_columns:
         if col in df_display.columns:
-            df_display[col] = df_display[col].apply(currency_format)
+            format_mapper[col] = lambda x: f"${x:,.2f}" if pd.notna(x) else ""
     for col in integer_columns:
         if col in df_display.columns:
-            df_display[col] = df_display[col].apply(integer_format)
-    st.dataframe(df_display, use_container_width=True)
-
-# --- Sección de Resumen Anual ---
-if summary_df is not None:
-    st.markdown("---")
-    st.subheader("Resumen de Evolución Anual (Datos de Control)")
-    summary_df_display = summary_df.reset_index().copy()
-    for col in summary_df_display.columns:
-        if col != 'Mes' and pd.api.types.is_numeric_dtype(summary_df_display[col]):
-            summary_df_display[col] = summary_df_display[col].apply(currency_format)
-    st.dataframe(summary_df_display, use_container_width=True, hide_index=True)
+            format_mapper[col] = lambda x: f"{int(x):,}" if pd.notna(x) else ""
     
-    summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
-    summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
-        x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
-        y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-        color=alt.Color('Clasificacion:N', title='Clasificación'),
-        tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Clasificacion:N'), alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')]
-    ).properties(
-        height=350,
-        padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}  # <-- CAMBIO AQUÍ
-    ).configure_view(fill='transparent')
-    st.altair_chart(summary_chart, use_container_width=True)
+    columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_display.columns]
+
+    df_formatted = df_display.copy()
+    for col, formatter in format_mapper.items():
+        df_formatted[col] = df_formatted[col].apply(formatter)
+
+    styler = df_formatted.style.set_properties(subset=columns_to_align_right, **{'text-align': 'right'}).hide(axis="index")
+    html = styler.to_html()
+
+    st.markdown(f'<div class="dataframe-container" style="overflow-x: auto;">{html}</div>', unsafe_allow_html=True)
+    
+    # --- Sección de Resumen Anual ---
+    if summary_df is not None:
+        st.markdown("---")
+        st.subheader("Resumen de Evolución Anual (Datos de Control)")
+        summary_df_display = summary_df.reset_index().copy()
+        summary_currency_cols = [col for col in summary_df_display.columns if col != 'Mes' and pd.api.types.is_numeric_dtype(summary_df_display[col])]
+        summary_format_mapper = {col: "${:,.2f}" for col in summary_currency_cols}
+        st.dataframe(summary_df_display.style.format(summary_format_mapper, na_rep="").set_properties(subset=summary_currency_cols, **{'text-align': 'right'}), use_container_width=True, hide_index=True)
+        
+        summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
+        summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
+            x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
+            y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+            color=alt.Color('Clasificacion:N', title='Clasificación'),
+            tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Clasificacion:N'), alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')]
+        ).properties(height=350, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure_view(fill='transparent')
+        st.altair_chart(summary_chart, use_container_width=True)
