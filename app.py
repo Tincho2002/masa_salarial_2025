@@ -43,10 +43,6 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
-/* SOLUCIÓN DE ALINEACIÓN DEFINITIVA */
-.stDataFrame table tbody td {
-    text-align: right !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -78,22 +74,37 @@ def load_data(url):
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        # Se asegura que las columnas enteras sean del tipo correcto
+        currency_cols = [
+            'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
+            'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
+            'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.',
+            'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad',
+            'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras',
+            'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes',
+            'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.',
+            'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
+            'Asignaciones Familiares 1.4.', 'Total Mensual'
+        ]
+        
+        for col in currency_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+        
         if 'Dotación' in df.columns:
-            df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
+            df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype('Int64')
         
         if 'Nro. de Legajo' in df.columns:
-             df['Nro. de Legajo'] = pd.to_numeric(df['Nro. de Legajo'], errors='coerce')
-             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype('Int64')
+             df['Nro. de Legajo'] = pd.to_numeric(df['Nro. de Legajo'], errors='coerce').astype('Int64')
 
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
+        df.dropna(subset=key_filter_columns, inplace=True)
+
         for col in key_filter_columns:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
         
-        df.dropna(subset=key_filter_columns, inplace=True)
         df.reset_index(drop=True, inplace=True)
         return df
     except Exception as e:
@@ -142,6 +153,7 @@ selected_relacion = st.sidebar.multiselect('Relación', options=relacion_options
 meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique().tolist()
 selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=meses_ordenados)
 
+
 # --- Aplicar filtros ---
 df_filtered = df[
     df['Gerencia'].isin(selected_gerencia) &
@@ -149,10 +161,10 @@ df_filtered = df[
     df['Clasificacion_Ministerio'].isin(selected_clasificacion) &
     df['Relación'].isin(selected_relacion) &
     df['Mes'].isin(selected_mes)
-].copy()
+]
 
 # --- KPIs Principales ---
-total_masa_salarial = df_filtered['Total Mensual'].sum()
+total_masa_salarial = df_filtered['Total Mensual'].sum() if 'Total Mensual' in df_filtered.columns else 0
 cantidad_empleados = 0
 latest_month_name = "N/A"
 if not df_filtered.empty:
@@ -172,10 +184,6 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    # --- Formateadores universales ---
-    currency_format = lambda x: f"${x:,.2f}"
-    integer_format = lambda x: f"{int(x):,}" if pd.notna(x) else ""
-
     # --- Sección 1: Evolución Mensual ---
     st.subheader("Evolución Mensual de la Masa Salarial")
     col_chart1, col_table1 = st.columns([2, 1])
@@ -189,9 +197,7 @@ else:
         ).properties(height=chart_height1).configure_view(fill='transparent')
         st.altair_chart(line_chart, use_container_width=True)
     with col_table1:
-        masa_mensual_display = masa_mensual[['Mes', 'Total Mensual']].copy()
-        masa_mensual_display['Total Mensual'] = masa_mensual_display['Total Mensual'].apply(currency_format)
-        st.dataframe(masa_mensual_display, hide_index=True, use_container_width=True, height=chart_height1 - 10)
+        st.dataframe(masa_mensual[['Mes', 'Total Mensual']], column_config={"Total Mensual": st.column_config.NumberColumn(format="$,.2f")}, hide_index=True, use_container_width=True, height=chart_height1 - 10)
 
     st.markdown("---")
     # --- Sección 2: Masa Salarial por Gerencia ---
@@ -207,9 +213,7 @@ else:
         ).properties(height=chart_height2).configure_view(fill='transparent')
         st.altair_chart(bar_chart, use_container_width=True)
     with col_table2:
-        gerencia_data_display = gerencia_data.copy()
-        gerencia_data_display['Total Mensual'] = gerencia_data_display['Total Mensual'].apply(currency_format)
-        st.dataframe(gerencia_data_display, hide_index=True, use_container_width=True, height=chart_height2 - 10)
+        st.dataframe(gerencia_data, column_config={"Total Mensual": st.column_config.NumberColumn(format="$,.2f")}, hide_index=True, use_container_width=True, height=chart_height2 - 10)
 
     st.markdown("---")
     # --- Sección 3: Distribución por Clasificación ---
@@ -225,33 +229,30 @@ else:
         ).properties(height=chart_height3).configure_view(fill='transparent')
         st.altair_chart(donut_chart, use_container_width=True)
     with col_table3:
-        clasificacion_data_display = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy()
-        clasificacion_data_display['Total Mensual'] = clasificacion_data_display['Total Mensual'].apply(currency_format)
-        st.dataframe(clasificacion_data_display, hide_index=True, use_container_width=True, height=chart_height3 - 10)
+        st.dataframe(clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}), column_config={"Total Mensual": st.column_config.NumberColumn(format="$,.2f")}, hide_index=True, use_container_width=True, height=chart_height3 - 10)
 
     st.markdown("---")
     # --- Tabla de Datos Detallados ---
     st.subheader("Tabla de Datos Detallados")
-    df_display = df_filtered.copy()
     currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
     integer_columns = ['Nro. de Legajo', 'Dotación']
-    for col in currency_columns:
-        if col in df_display.columns:
-            df_display[col] = df_display[col].apply(currency_format)
-    for col in integer_columns:
-        if col in df_display.columns:
-            df_display[col] = df_display[col].apply(integer_format)
-    st.dataframe(df_display, use_container_width=True)
+    column_configuration = {}
+    for col in df_filtered.columns:
+        if col in currency_columns:
+            column_configuration[col] = st.column_config.NumberColumn(label=col, format="$,.2f")
+        elif col in integer_columns:
+            column_configuration[col] = st.column_config.NumberColumn(label=col, format="%d")
+    st.dataframe(df_filtered, column_config=column_configuration, use_container_width=True)
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
-    summary_df_display = summary_df.reset_index().copy()
-    for col in summary_df_display.columns:
-        if col != 'Mes' and pd.api.types.is_numeric_dtype(summary_df_display[col]):
-            summary_df_display[col] = summary_df_display[col].apply(currency_format)
-    st.dataframe(summary_df_display, use_container_width=True, hide_index=True)
+    summary_column_config = {}
+    for col in summary_df.columns:
+        if pd.api.types.is_numeric_dtype(summary_df[col]):
+            summary_column_config[col] = st.column_config.NumberColumn(label=col, format="$,.2f")
+    st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
     
     summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
     summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
