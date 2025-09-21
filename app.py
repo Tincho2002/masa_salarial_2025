@@ -98,7 +98,8 @@ def load_data(url):
         
         if 'Nro. de Legajo' in df.columns:
              df['Nro. de Legajo'] = pd.to_numeric(df['Nro. de Legajo'], errors='coerce')
-             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype('Int64') # Int64 para soportar nulos
+             # Usar Int64 (capital 'I') para permitir valores nulos (NaN) si los hubiera
+             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype('Int64')
 
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
@@ -326,7 +327,7 @@ else:
             # Configurar como número con formato de moneda
             column_configuration[col] = st.column_config.NumberColumn(
                 label=col,
-                format="$,.2f"
+                format="$,.2f" # SINTAXIS CORRECTA
             )
         elif col in integer_columns:
             # Configurar como número entero
@@ -335,7 +336,7 @@ else:
                 format="%d"
             )
         else:
-            # El resto, como texto (comportamiento por defecto)
+            # El resto de columnas (texto) no necesita configuración especial
             pass
     
     # 3. Mostrar el dataframe con la configuración explícita
@@ -357,7 +358,7 @@ if summary_df is not None:
         if pd.api.types.is_numeric_dtype(summary_df[col]):
             summary_column_config[col] = st.column_config.NumberColumn(
                 label=col,
-                format="$,.2f"
+                format="$,.2f" # SINTAXIS CORRECTA
             )
     
     st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
