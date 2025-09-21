@@ -92,7 +92,6 @@ def load_data(url):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
-        # Se asegura que la dotación también sea numérica
         if 'Dotación' in df.columns:
             df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0)
 
