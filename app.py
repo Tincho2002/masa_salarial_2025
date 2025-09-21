@@ -288,15 +288,11 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN FINAL Y DEFINITIVA ---
-    # El método inestable de styler se reemplaza por uno más robusto:
-    # 1. Se crea una copia del dataframe para modificarla.
-    # 2. Se pre-formatean los números a strings con el formato correcto.
-    # 3. Se aplica un estilo simple de alineación, que es una operación estable.
+    # --- SOLUCIÓN FINAL ---
+    # Se utiliza st.column_config, el método nativo y estable de Streamlit,
+    # con el formato correcto que SÍ incluye separador de miles.
     
-    df_display = df_filtered.copy()
-
-    # Lista de todas las columnas que deben tener formato de moneda.
+    # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -309,23 +305,26 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # Pre-formatear las columnas de moneda a strings
-    for col in detailed_table_cols:
-        if col in df_display.columns:
-            df_display[col] = df_display[col].map(lambda x: f"${x:,.2f}")
-
-    # Identificar las columnas a alinear a la derecha.
-    columns_to_align_right = [col for col in detailed_table_cols if col in df_display.columns]
-    if 'Dotación' in df_display.columns:
-        columns_to_align_right.append('Dotación')
-
-    # Aplicar SOLO la alineación con el Styler.
-    df_styled = df_display.style.set_properties(
-        subset=columns_to_align_right, **{'text-align': 'right'}
-    )
+    # 2. Crear un diccionario de configuración de columnas dinámicamente.
+    column_configuration = {}
+    for col_name in detailed_table_cols:
+        if col_name in df_filtered.columns:
+            column_configuration[col_name] = st.column_config.NumberColumn(
+                label=col_name,
+                format="$ {:,.2f}" # <-- EL FORMATO CORRECTO CON SEPARADOR DE MILES
+            )
+            
+    # Añadir formato para la columna 'Dotación' si existe.
+    if 'Dotación' in df_filtered.columns:
+        column_configuration['Dotación'] = st.column_config.NumberColumn(
+            label="Dotación",
+            format="%d"
+        )
     
+    # 3. Mostrar el dataframe con la configuración aplicada.
     st.dataframe(
-        df_styled,
+        df_filtered,
+        column_config=column_configuration,
         use_container_width=True
     )
 
