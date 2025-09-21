@@ -55,9 +55,7 @@ def to_excel(df):
         df.to_excel(writer, index=False, sheet_name='Sheet1')
     return output.getvalue()
 
-# **CAMBIO**: La función ahora acepta el período seleccionado
 def to_pdf(df, periodo):
-    """Convierte un DataFrame a un archivo PDF bien formateado usando HTML."""
     periodo_str = ", ".join(periodo)
     html_table = df.to_html(index=False, border=0)
     html_content = f"""
@@ -68,7 +66,7 @@ def to_pdf(df, periodo):
     <style>
         body {{ font-family: "Arial", sans-serif; }}
         h2 {{ text-align: center; }}
-        h3 {{ text-align: center; font-weight: normal; }}
+        h3 {{ text-align: center; font-weight: normal; font-size: 12px; }}
         table {{ width: 100%; border-collapse: collapse; }}
         th, td {{ padding: 6px 5px; text-align: left; border: 1px solid #dddddd; font-size: 9px; }}
         thead th {{ background-color: #f2f2f2; font-size: 10px; font-weight: bold; }}
@@ -81,7 +79,6 @@ def to_pdf(df, periodo):
     </body>
     </html>
     """
-    # **CAMBIO**: Orientación a Landscape (L) y formato A3
     pdf = FPDF(orientation='L', unit='mm', format='A3')
     pdf.add_page()
     pdf.write_html(html_content)
@@ -102,11 +99,8 @@ def load_data(url):
     df['Mes_Num'] = df['Período'].dt.month.astype(int)
     meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
     df['Mes'] = df['Mes_Num'].map(meses_es)
-
-    # **CAMBIO**: Corregir tipo de dato de la columna 'Ceco'
     if 'Ceco' in df.columns:
         df['Ceco'] = pd.to_numeric(df['Ceco'], errors='coerce').astype('Int64')
-        
     if 'Dotación' in df.columns:
         df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
     if 'Nro. de Legajo' in df.columns:
@@ -217,16 +211,23 @@ else:
         with col_btn2:
             st.download_button(label="📥 Excel (Tabla Completa)", data=to_excel(df_display), file_name='datos_detallados.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
         with col_btn3:
-            pdf_summary_cols = ['Nro. de Legajo', 'Apellido y Nombres', 'Gerencia', 'Clasificacion_Ministerio', 'Total Mensual']
+            # **INICIA CAMBIO PARA PDF**
+            pdf_summary_cols = ['Período', 'Nro. de Legajo', 'Apellido y Nombres', 'Gerencia', 'Clasificacion_Ministerio', 'Total Mensual']
             existing_pdf_cols = [col for col in pdf_summary_cols if col in df_display.columns]
-            df_pdf_summary = df_display[existing_pdf_cols]
+            df_pdf_raw = df_display[existing_pdf_cols]
+            
+            df_pdf_formatted = df_pdf_raw.copy()
+            df_pdf_formatted['Período'] = df_pdf_formatted['Período'].dt.strftime('%Y-%m')
+            df_pdf_formatted['Total Mensual'] = df_pdf_formatted['Total Mensual'].apply(lambda x: f"${x:,.2f}")
+            
             st.download_button(
                 label="📥 PDF (Resumen)",
-                data=to_pdf(df_pdf_summary, selected_mes), # **CAMBIO**: Pasar el período seleccionado
+                data=to_pdf(df_pdf_formatted, selected_mes),
                 file_name='resumen_detallado.pdf',
                 mime='application/pdf',
                 use_container_width=True
             )
+            # **TERMINA CAMBIO PARA PDF**
         st.write("")
         if 'page_number' not in st.session_state: st.session_state.page_number = 0
         PAGE_SIZE = 50
