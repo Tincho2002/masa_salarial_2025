@@ -74,7 +74,7 @@ def load_data(url):
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        # MODIFICACIÓN: Lista exhaustiva de todas las columnas de moneda
+        # Lista exhaustiva de todas las columnas de moneda
         currency_cols = [
             'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
             'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -289,7 +289,9 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # MODIFICACIÓN: Crear dinámicamente la configuración para todas las columnas de moneda
+    # MODIFICACIÓN: Usar styler para un formato más robusto
+    
+    # Lista de todas las columnas que deben tener formato de moneda
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -302,20 +304,18 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    column_config = {
-        col: st.column_config.NumberColumn(
-            f"{col} ($)",
-            format="$ {:,.2f}",
-        )
+    # Crear un diccionario de formato para las columnas que existen en el dataframe
+    formatters = {
+        col: "${:,.2f}"
         for col in detailed_table_cols if col in df_filtered.columns
     }
     
-    # Añadir configuración para columnas no monetarias
-    column_config["Dotación"] = st.column_config.NumberColumn(format="%d")
+    # Añadir formato para la columna 'Dotación' si existe
+    if 'Dotación' in df_filtered.columns:
+        formatters['Dotación'] = "{:d}"
 
     st.dataframe(
-        df_filtered,
-        column_config=column_config,
+        df_filtered.style.format(formatters),
         use_container_width=True
     )
 
