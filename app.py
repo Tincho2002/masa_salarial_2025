@@ -302,6 +302,11 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
+    # --- SOLUCIÓN ROBUSTA PARA FORMATEO ---
+    # Se crea una copia para no alterar el dataframe original (usado en otros cálculos)
+    df_display = df_filtered.copy()
+
+    # Columnas que necesitan formato de moneda
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -314,23 +319,15 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    column_configuration = {}
+    # Se aplica el formato directamente en los datos.
+    # ADVERTENCIA: Esto convierte las columnas a texto, por lo que el ordenamiento numérico en la UI dejará de funcionar.
     for col_name in detailed_table_cols:
-        if col_name in df_filtered.columns:
-            column_configuration[col_name] = st.column_config.NumberColumn(
-                label=col_name,
-                format="$ {:,.2f}" # <-- ESTE FUE EL CAMBIO
-            )
-            
-    if 'Dotación' in df_filtered.columns:
-        column_configuration['Dotación'] = st.column_config.NumberColumn(
-            label="Dotación",
-            format="%d"
-        )
-    
+        if col_name in df_display.columns:
+            df_display[col_name] = df_display[col_name].map('${:,.2f}'.format)
+
+    # Se muestra la tabla con los datos ya formateados como texto.
     st.dataframe(
-        df_filtered,
-        column_config=column_configuration,
+        df_display,
         use_container_width=True
     )
 
