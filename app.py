@@ -43,28 +43,6 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
-/* Estilos para la tabla HTML renderizada manualmente */
-.custom-html-table-container {
-    height: 500px; /* Altura fija para la tabla detallada */
-    overflow-y: auto; /* Scroll vertical si el contenido excede la altura */
-}
-.custom-html-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: var(--text-color);
-}
-.custom-html-table th, .custom-html-table td {
-    padding: 8px 12px;
-    border: 1px solid #e0e0e0;
-    text-align: left;
-    white-space: nowrap;
-}
-.custom-html-table thead th {
-    background-color: #f0f2f6;
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -114,6 +92,7 @@ def load_data(url):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
+        # Se asegura que la dotación también sea numérica
         if 'Dotación' in df.columns:
             df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0)
 
@@ -311,8 +290,8 @@ else:
     st.subheader("Tabla de Datos Detallados")
     
     # --- SOLUCIÓN DEFINITIVA Y ROBUSTA ---
-    # Se renderiza la tabla como HTML para un control total del formato,
-    # evitando los errores de los componentes nativos de Streamlit.
+    # Se utiliza el Styler de Pandas, el mismo método que en las tablas de resumen,
+    # que es el criterio correcto, estable y unificado.
     
     # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
@@ -327,31 +306,31 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # 2. Crear un diccionario de formato para las columnas que existen.
+    # 2. Crear un diccionario de formato para las columnas que existen en el dataframe.
     formatters = {
-        col: "${:,.2f}"
+        col: "${:,.2f}" # <-- El formato correcto con separador de miles
         for col in detailed_table_cols if col in df_filtered.columns
     }
+    
+    # Añadir formato para la columna 'Dotación' si existe, sin decimales.
     if 'Dotación' in df_filtered.columns:
         formatters['Dotación'] = "{:d}"
 
-    # 3. Identificar columnas a alinear a la derecha.
+    # 3. Identificar las columnas a alinear a la derecha.
     columns_to_align_right = [col for col in detailed_table_cols if col in df_filtered.columns]
     if 'Dotación' in df_filtered.columns:
         columns_to_align_right.append('Dotación')
-    
-    # 4. Aplicar estilos y convertir a HTML.
-    df_styled_html = (
-        df_filtered.style
-        .format(formatters)
-        .set_properties(subset=columns_to_align_right, **{'text-align': 'right'})
-        .hide(axis="index")
-        .to_html(classes="custom-html-table")
+
+    # 4. Aplicar el formato y la alineación con el Styler.
+    df_styled = df_filtered.style.format(formatters).set_properties(
+        subset=columns_to_align_right, **{'text-align': 'right'}
     )
     
-    # 5. Mostrar la tabla HTML dentro de un contenedor con estilo.
-    st.markdown(f'<div class="stDataFrame custom-html-table-container">{df_styled_html}</div>', unsafe_allow_html=True)
-
+    # 5. Mostrar el dataframe estilizado.
+    st.dataframe(
+        df_styled,
+        use_container_width=True
+    )
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
