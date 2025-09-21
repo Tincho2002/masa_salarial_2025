@@ -49,7 +49,7 @@ h1, h2, h3 {
 
 # --- FUNCIONES DE EXPORTACIÓN ---
 
-@st.cache_data
+# **CAMBIO**: Se eliminó @st.cache_data para evitar conflictos con la creación de archivos en memoria.
 def to_excel(df):
     """Convierte un DataFrame a un archivo Excel en memoria."""
     output = BytesIO()
@@ -64,23 +64,22 @@ def to_pdf(df):
     pdf.add_page()
     pdf.set_font('Arial', '', 8)
     
-    # Encabezados
     cols = df.columns
     col_width = pdf.w / (len(cols) + 1)
     for col in cols:
         pdf.cell(col_width, 10, str(col), border=1)
     pdf.ln()
 
-    # Datos
     for index, row in df.iterrows():
         for col in cols:
-            pdf.cell(col_width, 10, str(row[col]), border=1)
+            # Codificar a latin-1 para manejar caracteres especiales en PDF
+            cell_text = str(row[col]).encode('latin-1', 'replace').decode('latin-1')
+            pdf.cell(col_width, 10, cell_text, border=1)
         pdf.ln()
         
     return pdf.output(dest='S').encode('latin-1')
 
 # --- CARGA DE DATOS (sin cambios) ---
-# ... (El resto de las funciones de carga y el código principal hasta la tabla detallada se mantiene igual)
 @st.cache_data
 def load_data(url):
     try:
@@ -190,11 +189,7 @@ else:
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     chart_height1 = (len(masa_mensual) + 1) * 35 + 3
     with col_chart1:
-        line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
-            x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
-            y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'), scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)),
-            tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=chart_height1, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+        line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'), y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'), scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)), tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]).properties(height=chart_height1, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(line_chart, use_container_width=True)
     with col_table1:
         masa_mensual_display = masa_mensual[['Mes', 'Total Mensual']].copy()
@@ -206,11 +201,7 @@ else:
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
     chart_height2 = (len(gerencia_data) + 1) * 35 + 3
     with col_chart2:
-        bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
-            x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-            y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelLimit=120)),
-            tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=chart_height2, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+        bar_chart = alt.Chart(gerencia_data).mark_bar().encode(x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')), y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelLimit=120)), tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]).properties(height=chart_height2, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(bar_chart, use_container_width=True)
     with col_table2:
         gerencia_data_display = gerencia_data.copy()
@@ -222,30 +213,24 @@ else:
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
     chart_height3 = (len(clasificacion_data) + 1) * 35 + 3
     with col_chart3:
-        donut_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=80).encode(
-            theta=alt.Theta("Total Mensual:Q"),
-            color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
-            tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=chart_height3, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+        donut_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=80).encode(theta=alt.Theta("Total Mensual:Q"), color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"), tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]).properties(height=chart_height3, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(donut_chart, use_container_width=True)
     with col_table3:
         clasificacion_data_display = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy()
         st.dataframe(clasificacion_data_display.style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height3)
     st.write("")
 
-    # --- Tabla de Datos Detallados con Paginación ---
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     df_display = df_filtered.copy().reset_index(drop=True)
 
     if not df_display.empty:
-        # --- **NUEVO**: Botones de descarga ---
         st.markdown("##### Descargar datos de la tabla completa")
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
             st.download_button(
                 label="📥 Descargar como CSV",
-                data=to_excel(df_display.to_csv(index=False).encode('utf-8')),
+                data=df_display.to_csv(index=False).encode('utf-8'), # **CAMBIO**
                 file_name='datos_detallados.csv',
                 mime='text/csv',
                 use_container_width=True
@@ -266,9 +251,8 @@ else:
                 mime='application/pdf',
                 use_container_width=True
             )
-        st.write("") # Espacio
+        st.write("") 
         
-        # Lógica de paginación
         if 'page_number' not in st.session_state: st.session_state.page_number = 0
         PAGE_SIZE = 50
         total_rows = len(df_display)
@@ -291,7 +275,6 @@ else:
         columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_page.columns]
         st.dataframe(df_page.style.format(format_mapper, na_rep="").set_properties(subset=columns_to_align_right, **{'text-align': 'right'}), use_container_width=True, hide_index=True)
     
-    # --- Resumen Anual ---
     if summary_df is not None:
         st.markdown("---")
         st.subheader("Resumen de Evolución Anual (Datos de Control)")
