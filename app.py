@@ -290,8 +290,8 @@ else:
     st.subheader("Tabla de Datos Detallados")
     
     # --- SOLUCIÓN DEFINITIVA Y ROBUSTA ---
-    # Se utiliza st.column_config, que es el método nativo de Streamlit
-    # para formatear y alinear columnas de forma estable.
+    # Se utiliza el Styler de Pandas, que es el método correcto y estable
+    # para aplicar formato complejo (separador de miles) y alineación.
 
     # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
@@ -306,26 +306,27 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # 2. Crear un diccionario de configuración de columnas dinámicamente.
-    column_configuration = {}
-    for col_name in detailed_table_cols:
-        if col_name in df_filtered.columns:
-            column_configuration[col_name] = st.column_config.NumberColumn(
-                label=col_name,
-                format="$ %.2f" # Formato de moneda con 2 decimales.
-            )
-            
-    # Añadir formato para la columna 'Dotación' si existe.
-    if 'Dotación' in df_filtered.columns:
-        column_configuration['Dotación'] = st.column_config.NumberColumn(
-            label="Dotación",
-            format="%d"
-        )
+    # 2. Crear un diccionario de formato para las columnas que existen en el dataframe.
+    formatters = {
+        col: "${:,.2f}" # <-- El formato correcto con separador de miles
+        for col in detailed_table_cols if col in df_filtered.columns
+    }
     
-    # 3. Mostrar el dataframe con la configuración aplicada.
+    # Añadir formato para la columna 'Dotación' si existe, sin decimales.
+    if 'Dotación' in df_filtered.columns:
+        formatters['Dotación'] = "{:d}"
+
+    # 3. Identificar las columnas a alinear a la derecha.
+    columns_to_align_right = [col for col in detailed_table_cols if col in df_filtered.columns]
+    
+    # 4. Aplicar el formato y la alineación con el Styler.
+    df_styled = df_filtered.style.format(formatters).set_properties(
+        subset=columns_to_align_right, **{'text-align': 'right'}
+    )
+    
+    # 5. Mostrar el dataframe estilizado.
     st.dataframe(
-        df_filtered,
-        column_config=column_configuration,
+        df_styled,
         use_container_width=True
     )
 
