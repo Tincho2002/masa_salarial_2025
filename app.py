@@ -1,15 +1,11 @@
-# app.py (versión corregida — preserva gráficos y alineación $ a la derecha)
-
 import streamlit as st
 import pandas as pd
-import numpy as np
 import altair as alt
-from io import BytesIO
 
-# --- Config página ---
-st.set_page_config(layout="wide", page_title="Masa Salarial 2025")
+# --- Configuración de la página ---
+st.set_page_config(layout="wide")
 
-# --- CSS personalizado (igual que el tuyo) ---
+# --- CSS Personalizado para un Estilo Profesional ---
 st.markdown("""
 <style>
 :root {
@@ -27,6 +23,7 @@ body, .stApp {
     background-color: var(--secondary-background-color);
     border-right: 1px solid #e0e0e0;
 }
+/* Estilo para contenedores de métricas y tablas */
 [data-testid="stMetric"], .stDataFrame {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
@@ -34,20 +31,22 @@ body, .stApp {
     border-radius: 10px !important;
     padding: 20px;
 }
+/* SOLUCIÓN DEFINITIVA: Estilo del contenedor del gráfico */
 div[data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border-radius: 10px !important;
-    overflow: hidden !important;
+    overflow: hidden !important; /* Obliga al contenido a respetar los bordes redondeados */
 }
 h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
+/* Estilos para la tabla HTML renderizada manualmente */
 .custom-html-table-container {
-    height: 500px;
-    overflow: auto;
+    height: 500px; /* Altura fija para la tabla detallada */
+    overflow: auto; /* Scroll en ambas direcciones si es necesario */
 }
 .custom-html-table {
     width: 100%;
@@ -70,31 +69,35 @@ h1, h2, h3 {
 </style>
 """, unsafe_allow_html=True)
 
-# --- Fuente de datos ---
+# --- URL del archivo Excel en GitHub ---
 FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
 
-# --- Funciones de carga (cached) ---
+# --- Carga de datos con cache ---
 @st.cache_data
 def load_data(url):
+    """
+    Carga y preprocesa los datos detallados de la hoja 'masa_salarial'.
+    """
     try:
         df = pd.read_excel(url, sheet_name='masa_salarial', header=0, engine='openpyxl')
         df.columns = [str(col).strip() for col in df.columns]
 
         if 'Unnamed: 0' in df.columns:
             df = df.drop(columns=['Unnamed: 0'])
+            
         if 'Período' not in df.columns:
-            st.error("Error crítico: la columna 'Período' no se encuentra en la hoja 'masa_salarial'.")
+            st.error("Error Crítico: La columna 'Período' no se encuentra.")
             return pd.DataFrame()
-
+        
         df['Período'] = pd.to_datetime(df['Período'], errors='coerce')
         df.dropna(subset=['Período'], inplace=True)
         df['Mes_Num'] = df['Período'].dt.month.astype(int)
-
-        meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio',
+        
+        meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        # columnas monetarias: convertir a numérico si existen
+        # Lista exhaustiva de todas las columnas de moneda
         currency_cols = [
             'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
             'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -106,25 +109,27 @@ def load_data(url):
             'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
             'Asignaciones Familiares 1.4.', 'Total Mensual'
         ]
+        
+        # Se convierte cada columna a numérica, si existe en el dataframe
         for col in currency_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-
+        
         if 'Dotación' in df.columns:
             df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0)
 
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
-        existing_key_cols = [c for c in key_filter_columns if c in df.columns]
-        if existing_key_cols:
-            df.dropna(subset=existing_key_cols, inplace=True)
-            for col in existing_key_cols:
+        df.dropna(subset=key_filter_columns, inplace=True)
+
+        for col in key_filter_columns:
+            if col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
-
+        
         if 'Nro. de Legajo' in df.columns:
-            df['Nro. de Legajo'] = df['Nro. de Legajo'].astype(str).str.strip()
-
+             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype(str).str.strip()
+        
         df.reset_index(drop=True, inplace=True)
         return df
     except Exception as e:
@@ -133,6 +138,9 @@ def load_data(url):
 
 @st.cache_data
 def load_summary_data(url):
+    """
+    Carga los datos de resumen de la hoja 'Evolución Anual'.
+    """
     try:
         summary_df = pd.read_excel(url, sheet_name='Evolución Anual', header=3, index_col=0, engine='openpyxl')
         summary_df.dropna(how='all', axis=0, inplace=True)
@@ -145,7 +153,7 @@ def load_summary_data(url):
         st.warning(f"No se pudo cargar la hoja de resumen 'Evolución Anual': {e}")
         return None
 
-# --- Carga datos ---
+# --- Carga de datos ---
 df = load_data(FILE_URL)
 summary_df = load_summary_data(FILE_URL)
 
@@ -153,75 +161,68 @@ if df.empty:
     st.error("La carga de datos detallados ha fallado. El dashboard no puede continuar.")
     st.stop()
 
-# --- Título ---
+# --- Título del Dashboard ---
 st.title('📊 Dashboard de Masa Salarial 2025')
 st.markdown("Análisis interactivo de los costos de la mano de obra de la compañía.")
-
-# --- Sidebar filtros ---
+    
+# --- Barra Lateral de Filtros ---
 st.sidebar.header('Filtros del Dashboard')
 
-def safe_unique(colname):
-    return sorted(df[colname].dropna().unique().tolist()) if colname in df.columns else []
-
-gerencia_options = safe_unique('Gerencia')
+gerencia_options = sorted(df['Gerencia'].unique())
 selected_gerencia = st.sidebar.multiselect('Gerencia', options=gerencia_options, default=gerencia_options)
 
-nivel_options = safe_unique('Nivel')
+nivel_options = sorted(df['Nivel'].unique())
 selected_nivel = st.sidebar.multiselect('Nivel', options=nivel_options, default=nivel_options)
 
-clasificacion_options = safe_unique('Clasificacion_Ministerio')
+clasificacion_options = sorted(df['Clasificacion_Ministerio'].unique())
 selected_clasificacion = st.sidebar.multiselect('Clasificación Ministerio', options=clasificacion_options, default=clasificacion_options)
 
-relacion_options = safe_unique('Relación')
+relacion_options = sorted(df['Relación'].unique())
 selected_relacion = st.sidebar.multiselect('Relación', options=relacion_options, default=relacion_options)
 
-meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique().tolist() if 'Mes_Num' in df.columns else []
+meses_ordenados = df.sort_values('Mes_Num')['Mes'].unique().tolist()
 selected_mes = st.sidebar.multiselect('Mes', options=meses_ordenados, default=meses_ordenados)
 
-# --- Aplicar filtros robusto ---
-df_filtered = df.copy()
-if 'Gerencia' in df.columns:
-    df_filtered = df_filtered[df_filtered['Gerencia'].isin(selected_gerencia)]
-if 'Nivel' in df.columns:
-    df_filtered = df_filtered[df_filtered['Nivel'].isin(selected_nivel)]
-if 'Clasificacion_Ministerio' in df.columns:
-    df_filtered = df_filtered[df_filtered['Clasificacion_Ministerio'].isin(selected_clasificacion)]
-if 'Relación' in df.columns:
-    df_filtered = df_filtered[df_filtered['Relación'].isin(selected_relacion)]
-if 'Mes' in df.columns:
-    df_filtered = df_filtered[df_filtered['Mes'].isin(selected_mes)]
 
-# --- KPIs ---
-total_masa_salarial = df_filtered['Total Mensual'].sum() if 'Total Mensual' in df_filtered.columns else 0
+# --- Aplicar filtros ---
+df_filtered = df[
+    df['Gerencia'].isin(selected_gerencia) &
+    df['Nivel'].isin(selected_nivel) &
+    df['Clasificacion_Ministerio'].isin(selected_clasificacion) &
+    df['Relación'].isin(selected_relacion) &
+    df['Mes'].isin(selected_mes)
+]
+
+# --- KPIs Principales ---
+total_masa_salarial = df_filtered['Total Mensual'].sum()
 cantidad_empleados = 0
 latest_month_name = "N/A"
 
-if not df_filtered.empty and 'Mes_Num' in df_filtered.columns:
+if not df_filtered.empty:
     latest_month_num = df_filtered['Mes_Num'].max()
     df_latest_month = df_filtered[df_filtered['Mes_Num'] == latest_month_num]
-    if 'Dotación' in df_latest_month.columns:
-        cantidad_empleados = df_latest_month['Dotación'].sum()
-    if not df_latest_month.empty and 'Mes' in df_latest_month.columns:
+    cantidad_empleados = df_latest_month['Dotación'].sum()
+    if not df_latest_month.empty:
         latest_month_name = df_latest_month['Mes'].iloc[0]
 
 costo_medio = total_masa_salarial / cantidad_empleados if cantidad_empleados > 0 else 0
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Masa Salarial Total (Período)", f"${total_masa_salarial:,.2f}")
-col2.metric(f"Empleados ({latest_month_name})", f"{int(cantidad_empleados):,d}")
+col2.metric(f"Empleados ({latest_month_name})", f"{int(cantidad_empleados)}")
 col3.metric("Costo Medio por Empleado (Período)", f"${costo_medio:,.2f}")
-
+    
 st.markdown("---")
 
-# --- Visualizaciones (mantenidas igual a tu original) ---
+# --- Visualizaciones ---
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    # Evolución mensual
+    # --- Sección 1: Evolución Mensual ---
     st.subheader("Evolución Mensual de la Masa Salarial")
     col_chart1, col_table1 = st.columns([2, 1])
     chart_height1 = 350
-
+    
     with col_chart1:
         masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
         line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
@@ -239,26 +240,21 @@ else:
             fill='transparent'
         )
         st.altair_chart(line_chart, use_container_width=True)
-
+    
     with col_table1:
-        # ---- Mostrar tabla pequeña con números (no convertir a string) para que Streamlit alinee numéricos a la derecha ----
-        masa_mensual_display = masa_mensual[['Mes', 'Total Mensual']].copy()
-        # No convertir a string: dejamos Total Mensual numérico (st.dataframe alineará a la derecha)
-        # Pero para preservar formato visual mostramos un Styler (si tu versión de Streamlit lo soporta)
-        masa_mensual_styled = masa_mensual_display.style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=['Total Mensual'], **{'text-align': 'right'}).hide(axis="index")
-        try:
-            st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1 - 10)
-        except Exception:
-            # Si Streamlit no soporta Styler en st.dataframe, mostrar el DataFrame numérico (alineado por st) con float_format global temporal
-            with pd.option_context('display.float_format', '{:,.2f}'.format):
-                st.dataframe(masa_mensual_display, use_container_width=True, height=chart_height1 - 10)
+        masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1 - 10)
 
     st.markdown("---")
 
-    # Masa por gerencia
+    # --- Sección 2: Masa Salarial por Gerencia (Gráfico a la Izquierda) ---
     st.subheader("Masa Salarial por Gerencia")
+    
     col_chart2, col_table2 = st.columns([3, 2])
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
+    
     chart_height2 = 500
 
     with col_chart2:
@@ -275,19 +271,16 @@ else:
             fill='transparent'
         )
         st.altair_chart(bar_chart, use_container_width=True)
-
+        
     with col_table2:
-        gerencia_display = gerencia_data.copy()
-        gerencia_styled = gerencia_display.style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=['Total Mensual'], **{'text-align': 'right'}).hide(axis="index")
-        try:
-            st.dataframe(gerencia_styled, use_container_width=True, height=chart_height2 - 10)
-        except Exception:
-            with pd.option_context('display.float_format', '{:,.2f}'.format):
-                st.dataframe(gerencia_display, use_container_width=True, height=chart_height2 - 10)
+        gerencia_data_styled = gerencia_data.style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(gerencia_data_styled, use_container_width=True, height=chart_height2 - 10)
 
     st.markdown("---")
 
-    # Distribución por clasificación
+    # --- Sección 3: Distribución por Clasificación ---
     st.subheader("Distribución por Clasificación")
     col_chart3, col_table3 = st.columns([2, 1])
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
@@ -307,24 +300,22 @@ else:
         st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
-        clasificacion_display = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy()
-        clasificacion_styled = clasificacion_display.style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=['Total Mensual'], **{'text-align': 'right'}).hide(axis="index")
-        try:
-            st.dataframe(clasificacion_styled, use_container_width=True, height=chart_height3 - 10)
-        except Exception:
-            with pd.option_context('display.float_format', '{:,.2f}'.format):
-                st.dataframe(clasificacion_display, use_container_width=True, height=chart_height3 - 10)
+        clasificacion_data_styled = clasificacion_data.rename(
+            columns={'Clasificacion_Ministerio': 'Clasificación'}
+        ).style.format({
+            "Total Mensual": "${:,.2f}"
+        }).hide(axis="index")
+        st.dataframe(clasificacion_data_styled, use_container_width=True, height=chart_height3 - 10)
+
 
     st.markdown("---")
-
-    # --- Tabla detallada: PREVIEW (por defecto) + opción voluntaria de render completo (HTML) con advertencia ---
     st.subheader("Tabla de Datos Detallados")
-
-    st.info("Mostrar la tabla completa como HTML puede colgar el navegador si el dataset es grande. Usá la vista previa o descargá el CSV.")
-
-    st.write(f"Filas filtradas: {len(df_filtered):,d} — Columnas: {len(df_filtered.columns):,d}")
-
-    # Formateo por columnas (sólo para las que existen)
+    
+    # --- SOLUCIÓN FINAL ---
+    # Se renderiza la tabla como HTML para un control total del formato,
+    # evitando los errores de los componentes nativos de Streamlit.
+    
+    # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -336,78 +327,64 @@ else:
         'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
-    formatters = {col: "${:,.2f}" for col in detailed_table_cols if col in df_filtered.columns}
+    
+    # 2. Crear un diccionario de formato para las columnas que existen.
+    formatters = {
+        col: "${:,.2f}"
+        for col in detailed_table_cols if col in df_filtered.columns
+    }
     if 'Dotación' in df_filtered.columns:
-        formatters['Dotación'] = "{:,.0f}"
+        formatters['Dotación'] = "{:d}"
 
+    # 3. Identificar columnas a alinear a la derecha.
     columns_to_align_right = [col for col in detailed_table_cols if col in df_filtered.columns]
     if 'Dotación' in df_filtered.columns:
         columns_to_align_right.append('Dotación')
+    
+    # 4. Aplicar estilos y convertir a HTML.
+    df_styled_html = (
+        df_filtered.style
+        .format(formatters)
+        .set_properties(subset=columns_to_align_right, **{'text-align': 'right'})
+        .hide(axis="index")
+        .to_html(classes="custom-html-table")
+    )
+    
+    # 5. Mostrar la tabla HTML dentro de un contenedor con estilo.
+    st.markdown(f'<div class="stDataFrame custom-html-table-container">{df_styled_html}</div>', unsafe_allow_html=True)
 
-    # Preview rows control
-    preview_default = 200 if len(df_filtered) > 200 else len(df_filtered)
-    preview_rows = st.number_input("Filas en vista previa", min_value=10, max_value=1000, value=preview_default, step=10)
-    df_preview = df_filtered.head(int(preview_rows)).copy()
 
-    # Mostrar preview con Styler (alineado a la derecha para columnas monetarias)
-    try:
-        df_preview_styled = df_preview.style.format(formatters).set_properties(subset=columns_to_align_right, **{'text-align': 'right'}).hide(axis="index")
-        st.dataframe(df_preview_styled, use_container_width=True, height=400)
-    except Exception:
-        # fallback: mostrar el DataFrame numérico (st.dataframe alinea numéricos a la derecha)
-        with pd.option_context('display.float_format', '{:,.2f}'.format):
-            st.dataframe(df_preview, use_container_width=True, height=400)
-
-    # Descarga CSV del filtrado completo
-    csv_bytes = df_filtered.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Descargar dataset filtrado (CSV)", data=csv_bytes, file_name="masa_salarial_filtrada.csv", mime="text/csv")
-
-    # Opción de render HTML completo (solo si el usuario confirma)
-    show_full_html = st.checkbox("Renderizar tabla completa como HTML (Peligro: puede colgar navegador) — solo si sabés lo que hacés", value=False)
-    if show_full_html:
-        max_rows_html = len(df_filtered)
-        if max_rows_html > 2000:
-            st.warning("El dataset tiene muchas filas. Por seguridad limitamos a 2.000 filas al renderizar HTML. Si querés el dataset completo, descargalo en CSV.")
-            max_rows_html = 2000
-        st.warning(f"Renderizando {max_rows_html:,d} filas como HTML. Esto puede tardar o colgar el navegador.")
-        try:
-            df_html = df_filtered.head(int(max_rows_html)).copy()
-            df_html_styled = df_html.style.format(formatters).set_properties(subset=columns_to_align_right, **{'text-align': 'right'}).hide(axis="index")
-            st.markdown(df_html_styled.to_html(), unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"Error al renderizar HTML: {e}")
-            st.info("Fallback: mostrar primeras filas con st.dataframe")
-            with pd.option_context('display.float_format', '{:,.2f}'.format):
-                st.dataframe(df_html.head(500), use_container_width=True, height=500)
-
-# --- Sección Resumen Anual (si existe) ---
+# --- Sección de Resumen Anual ---
 if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
+    
+    summary_formatters = {
+        col: "${:,.2f}"
+        for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
+    }
+    st.dataframe(summary_df.style.format(summary_formatters), use_container_width=True)
+    
+    summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
+        id_vars='Mes',
+        var_name='Clasificacion',
+        value_name='Masa Salarial'
+    )
+    
+    summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
+        x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
+        y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+        color=alt.Color('Clasificacion:N', title='Clasificación'),
+        tooltip=[
+            alt.Tooltip('Mes:N'),
+            alt.Tooltip('Clasificacion:N'),
+            alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')
+        ]
+    ).properties(
+        height=350,
+        padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
+    ).configure_view(
+        fill='transparent'
+    )
+    st.altair_chart(summary_chart, use_container_width=True)
 
-    try:
-        summary_formatters = {col: "${:,.2f}" for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])}
-        st.dataframe(summary_df.style.format(summary_formatters).hide(axis="index"), use_container_width=True, height=300)
-    except Exception:
-        s_df = summary_df.reset_index().copy()
-        num_cols = s_df.select_dtypes(include=[np.number]).columns.tolist()
-        for c in num_cols:
-            s_df[c] = s_df[c].map(lambda x: "${:,.2f}".format(x) if pd.notnull(x) else "")
-        st.dataframe(s_df, use_container_width=True, height=300)
-
-    # gráfico resumen
-    try:
-        summary_chart_data = summary_df.reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
-        summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
-            x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
-            y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-            color=alt.Color('Clasificacion:N', title='Clasificación'),
-            tooltip=[
-                alt.Tooltip('Mes:N'),
-                alt.Tooltip('Clasificacion:N'),
-                alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')
-            ]
-        ).properties(height=350)
-        st.altair_chart(summary_chart, use_container_width=True)
-    except Exception:
-        st.error("Error al dibujar gráfico de resumen.")
