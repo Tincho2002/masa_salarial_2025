@@ -49,9 +49,7 @@ h1, h2, h3 {
 
 # --- FUNCIONES DE EXPORTACIÓN ---
 
-# **CAMBIO**: Se eliminó @st.cache_data para evitar conflictos con la creación de archivos en memoria.
 def to_excel(df):
-    """Convierte un DataFrame a un archivo Excel en memoria."""
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Sheet1')
@@ -59,7 +57,6 @@ def to_excel(df):
     return processed_data
 
 def to_pdf(df):
-    """Convierte un DataFrame a un archivo PDF en memoria."""
     pdf = FPDF(orientation='L', unit='mm', format='A3')
     pdf.add_page()
     pdf.set_font('Arial', '', 8)
@@ -72,14 +69,14 @@ def to_pdf(df):
 
     for index, row in df.iterrows():
         for col in cols:
-            # Codificar a latin-1 para manejar caracteres especiales en PDF
             cell_text = str(row[col]).encode('latin-1', 'replace').decode('latin-1')
             pdf.cell(col_width, 10, cell_text, border=1)
         pdf.ln()
-        
-    return pdf.output(dest='S').encode('latin-1')
+    
+    # **CAMBIO**: La versión moderna de fpdf2 genera bytes directamente
+    return pdf.output()
 
-# --- CARGA DE DATOS (sin cambios) ---
+# --- CARGA DE DATOS ---
 @st.cache_data
 def load_data(url):
     try:
