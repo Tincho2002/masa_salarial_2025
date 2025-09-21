@@ -55,8 +55,10 @@ def to_excel(df):
         df.to_excel(writer, index=False, sheet_name='Sheet1')
     return output.getvalue()
 
-def to_pdf(df):
+# **CAMBIO**: La función ahora acepta el período seleccionado
+def to_pdf(df, periodo):
     """Convierte un DataFrame a un archivo PDF bien formateado usando HTML."""
+    periodo_str = ", ".join(periodo)
     html_table = df.to_html(index=False, border=0)
     html_content = f"""
     <!DOCTYPE html>
@@ -65,27 +67,22 @@ def to_pdf(df):
     <meta charset="UTF-8">
     <style>
         body {{ font-family: "Arial", sans-serif; }}
+        h2 {{ text-align: center; }}
+        h3 {{ text-align: center; font-weight: normal; }}
         table {{ width: 100%; border-collapse: collapse; }}
-        th, td {{
-            padding: 6px 5px;
-            text-align: left;
-            border: 1px solid #dddddd;
-            font-size: 9px;
-        }}
-        thead th {{
-            background-color: #f2f2f2;
-            font-size: 10px;
-            font-weight: bold;
-        }}
+        th, td {{ padding: 6px 5px; text-align: left; border: 1px solid #dddddd; font-size: 9px; }}
+        thead th {{ background-color: #f2f2f2; font-size: 10px; font-weight: bold; }}
     </style>
     </head>
     <body>
         <h2>Reporte Resumido de Datos</h2>
+        <h3>Período: {periodo_str}</h3>
         {html_table}
     </body>
     </html>
     """
-    pdf = FPDF(orientation='P', unit='mm', format='A4') # Cambiado a Portrarit y A4
+    # **CAMBIO**: Orientación a Landscape (L) y formato A3
+    pdf = FPDF(orientation='L', unit='mm', format='A3')
     pdf.add_page()
     pdf.write_html(html_content)
     return bytes(pdf.output())
@@ -105,6 +102,11 @@ def load_data(url):
     df['Mes_Num'] = df['Período'].dt.month.astype(int)
     meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
     df['Mes'] = df['Mes_Num'].map(meses_es)
+
+    # **CAMBIO**: Corregir tipo de dato de la columna 'Ceco'
+    if 'Ceco' in df.columns:
+        df['Ceco'] = pd.to_numeric(df['Ceco'], errors='coerce').astype('Int64')
+        
     if 'Dotación' in df.columns:
         df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
     if 'Nro. de Legajo' in df.columns:
@@ -215,13 +217,12 @@ else:
         with col_btn2:
             st.download_button(label="📥 Excel (Tabla Completa)", data=to_excel(df_display), file_name='datos_detallados.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
         with col_btn3:
-            # **CAMBIO**: Crear el subconjunto de datos para el PDF
             pdf_summary_cols = ['Nro. de Legajo', 'Apellido y Nombres', 'Gerencia', 'Clasificacion_Ministerio', 'Total Mensual']
             existing_pdf_cols = [col for col in pdf_summary_cols if col in df_display.columns]
             df_pdf_summary = df_display[existing_pdf_cols]
             st.download_button(
-                label="📥 PDF (Resumen)", # **CAMBIO**: Etiqueta actualizada
-                data=to_pdf(df_pdf_summary),
+                label="📥 PDF (Resumen)",
+                data=to_pdf(df_pdf_summary, selected_mes), # **CAMBIO**: Pasar el período seleccionado
                 file_name='resumen_detallado.pdf',
                 mime='application/pdf',
                 use_container_width=True
@@ -242,7 +243,7 @@ else:
         end_idx = min(start_idx + PAGE_SIZE, total_rows)
         df_page = df_display.iloc[start_idx:end_idx]
         currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
-        integer_columns = ['Nro. de Legajo', 'Dotación']
+        integer_columns = ['Nro. de Legajo', 'Dotación', 'Ceco']
         format_mapper = {col: "${:,.2f}" for col in currency_columns if col in df_page.columns}
         for col in integer_columns:
             if col in df_page.columns: format_mapper[col] = "{:,.0f}"
