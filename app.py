@@ -186,7 +186,10 @@ else:
             x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
             y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'), scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)),
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=chart_height1).configure_view(fill='transparent')
+        ).properties(
+            height=chart_height1,
+            padding=25  # <-- CAMBIO AQUÍ
+        ).configure_view(fill='transparent')
         st.altair_chart(line_chart, use_container_width=True)
     with col_table1:
         masa_mensual_display = masa_mensual[['Mes', 'Total Mensual']].copy()
@@ -204,7 +207,10 @@ else:
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelLimit=120)),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=chart_height2).configure_view(fill='transparent')
+        ).properties(
+            height=chart_height2,
+            padding=25  # <-- CAMBIO AQUÍ
+        ).configure_view(fill='transparent')
         st.altair_chart(bar_chart, use_container_width=True)
     with col_table2:
         gerencia_data_display = gerencia_data.copy()
@@ -222,7 +228,10 @@ else:
             theta=alt.Theta("Total Mensual:Q"),
             color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(height=chart_height3).configure_view(fill='transparent')
+        ).properties(
+            height=chart_height3,
+            padding=25  # <-- CAMBIO AQUÍ
+        ).configure_view(fill='transparent')
         st.altair_chart(donut_chart, use_container_width=True)
     with col_table3:
         clasificacion_data_display = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy()
@@ -259,6 +268,8 @@ if summary_df is not None:
         y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
         color=alt.Color('Clasificacion:N', title='Clasificación'),
         tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Clasificacion:N'), alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')]
-    ).properties(height=350).configure_view(fill='transparent')
+    ).properties(
+        height=350,
+        padding=25  # <-- CAMBIO AQUÍ
+    ).configure_view(fill='transparent')
     st.altair_chart(summary_chart, use_container_width=True)
-
