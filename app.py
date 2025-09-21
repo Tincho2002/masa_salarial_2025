@@ -31,7 +31,7 @@ body, .stApp {
     border-radius: 10px !important;
     padding: 20px;
 }
-/* SOLUCIÓN DEFINITIVA: Estilo del contenedor del gráfico */
+/* Estilo del contenedor del gráfico */
 div[data-testid="stAltairChart"] {
     background-color: var(--secondary-background-color);
     border: 1px solid #e0e0e0;
@@ -220,7 +220,6 @@ else:
         st.altair_chart(line_chart, use_container_width=True)
     
     with col_table1:
-        # CORREGIDO: Usar st.column_config para formatear la tabla
         st.dataframe(
             masa_mensual[['Mes', 'Total Mensual']],
             column_config={
@@ -257,7 +256,6 @@ else:
         st.altair_chart(bar_chart, use_container_width=True)
         
     with col_table2:
-        # CORREGIDO: Usar st.column_config para formatear la tabla
         st.dataframe(
             gerencia_data,
             column_config={
@@ -290,7 +288,6 @@ else:
         st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
-        # CORREGIDO: Usar st.column_config para formatear la tabla
         st.dataframe(
             clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}),
             column_config={
@@ -305,10 +302,6 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # Se utiliza st.column_config, que es el método nativo de Streamlit
-    # para formatear y alinear columnas de forma estable.
-
-    # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -321,23 +314,20 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # 2. Crear un diccionario de configuración de columnas dinámicamente.
     column_configuration = {}
     for col_name in detailed_table_cols:
         if col_name in df_filtered.columns:
             column_configuration[col_name] = st.column_config.NumberColumn(
                 label=col_name,
-                format="$ %.2f" # Formato de moneda con 2 decimales.
+                format="$ %.2f"
             )
             
-    # Añadir formato para la columna 'Dotación' si existe.
     if 'Dotación' in df_filtered.columns:
         column_configuration['Dotación'] = st.column_config.NumberColumn(
             label="Dotación",
             format="%d"
         )
     
-    # 3. Mostrar el dataframe con la configuración aplicada.
     st.dataframe(
         df_filtered,
         column_config=column_configuration,
@@ -349,7 +339,6 @@ if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    # CORREGIDO: Usar st.column_config para formatear la tabla de resumen
     summary_column_config = {
         col: st.column_config.NumberColumn(format="$ {:,.2f}")
         for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
