@@ -327,7 +327,7 @@ else:
             # Configurar como número con formato de moneda
             column_configuration[col] = st.column_config.NumberColumn(
                 label=col,
-                format="$,.2f" # SINTAXIS CORRECTA
+                format="$,.2f" 
             )
         elif col in integer_columns:
             # Configurar como número entero
@@ -358,7 +358,7 @@ if summary_df is not None:
         if pd.api.types.is_numeric_dtype(summary_df[col]):
             summary_column_config[col] = st.column_config.NumberColumn(
                 label=col,
-                format="$,.2f" # SINTAXIS CORRECTA
+                format="$,.2f"
             )
     
     st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
