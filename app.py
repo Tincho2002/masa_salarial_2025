@@ -43,32 +43,6 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
-/* Estilos para la tabla HTML renderizada manualmente */
-.custom-html-table-container {
-    height: 500px; /* Altura fija para la tabla detallada */
-    overflow: auto; /* Scroll en ambas direcciones si es necesario */
-}
-.custom-html-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: var(--text-color);
-}
-.custom-html-table th, .custom-html-table td {
-    padding: 8px 12px;
-    border: 1px solid #e0e0e0;
-    text-align: left;
-    white-space: nowrap;
-}
-.custom-html-table thead th {
-    background-color: #f0f2f6;
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-.numeric-cell {
-    text-align: right !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,6 +92,7 @@ def load_data(url):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
+        # Se asegura que la dotación también sea numérica
         if 'Dotación' in df.columns:
             df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0)
 
@@ -252,7 +227,7 @@ else:
 
     st.markdown("---")
 
-    # --- Sección 2: Masa Salarial por Gerencia (Gráfico a la Izquierda) ---
+    # --- Sección 2: Masa Salarial por Gerencia ---
     st.subheader("Masa Salarial por Gerencia")
     
     col_chart2, col_table2 = st.columns([3, 2])
@@ -314,10 +289,10 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN FINAL ---
-    # Se utiliza el Styler de Pandas, el mismo método que en las tablas de resumen,
-    # que es el criterio correcto, estable y unificado.
-    
+    # --- SOLUCIÓN DEFINITIVA Y ROBUSTA ---
+    # Se utiliza st.column_config, que es el método nativo de Streamlit
+    # para formatear y alinear columnas de forma estable.
+
     # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
@@ -331,29 +306,26 @@ else:
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
     
-    # 2. Crear un diccionario de formato para las columnas que existen en el dataframe.
-    formatters = {
-        col: "${:,.2f}" # <-- El formato correcto con separador de miles
-        for col in detailed_table_cols if col in df_filtered.columns
-    }
-    
-    # Añadir formato para la columna 'Dotación' si existe, sin decimales.
+    # 2. Crear un diccionario de configuración de columnas dinámicamente.
+    column_configuration = {}
+    for col_name in detailed_table_cols:
+        if col_name in df_filtered.columns:
+            column_configuration[col_name] = st.column_config.NumberColumn(
+                label=col_name,
+                format="$ %.2f" # Formato de moneda con 2 decimales.
+            )
+            
+    # Añadir formato para la columna 'Dotación' si existe.
     if 'Dotación' in df_filtered.columns:
-        formatters['Dotación'] = "{:d}"
-
-    # 3. Identificar las columnas a alinear a la derecha.
-    columns_to_align_right = [col for col in detailed_table_cols if col in df_filtered.columns]
-    if 'Dotación' in df_filtered.columns:
-        columns_to_align_right.append('Dotación')
-
-    # 4. Aplicar el formato y la alineación con el Styler.
-    df_styled = df_filtered.style.format(formatters).set_properties(
-        subset=columns_to_align_right, **{'text-align': 'right'}
-    )
+        column_configuration['Dotación'] = st.column_config.NumberColumn(
+            label="Dotación",
+            format="%d"
+        )
     
-    # 5. Mostrar el dataframe estilizado.
+    # 3. Mostrar el dataframe con la configuración aplicada.
     st.dataframe(
-        df_styled,
+        df_filtered,
+        column_config=column_configuration,
         use_container_width=True
     )
 
