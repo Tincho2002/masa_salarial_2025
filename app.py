@@ -205,13 +205,27 @@ else:
     st.markdown("---")
     st.subheader("Masa Salarial por Concepto")
 
-    # Lista de columnas que representan conceptos monetarios para la tabla dinámica
+    # Lista de columnas que representan conceptos monetarios para la tabla dinámica, EN EL ORDEN DESEADO
     concept_columns_to_pivot = [
-        'Nómina General con Aportes', 'Antigüedad', 'Horas Extras', 'Cs. Sociales s/Remunerativos',
-        'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria',
-        'Gastos de Representación', 'Gratificación por Antigüedad', 'Gratificación por Jubilación',
-        'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado',
-        'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Asignaciones Familiares 1.4.', 'Total Mensual'
+        'Nómina General con Aportes',
+        'Antigüedad',
+        'Horas Extras',
+        'Cs. Sociales s/Remunerativos',
+        'Cargas Sociales Antigüedad',
+        'Cargas Sociales Horas Extras',
+        'Nómina General sin Aportes',
+        'Gratificación Única y Extraordinaria',
+        'Gastos de Representación',
+        'Gratificación por Antigüedad',
+        'Gratificación por Jubilación',
+        'SAC Horas Extras',
+        'Cargas Sociales SAC Hextras',
+        'SAC Pagado',
+        'Cargas Sociales s/SAC Pagado',
+        'Vacaciones Pagadas',
+        'Cargas Sociales s/Vac. Pagadas',
+        'Asignaciones Familiares 1.4.',
+        'Total Mensual'
     ]
     
     # Filtrar solo las columnas que existen en el dataframe
@@ -243,6 +257,10 @@ else:
 
         # Calcular y añadir la columna de Total General
         pivot_table['Total general'] = pivot_table.sum(axis=1)
+
+        # Reordenar las filas (Concepto) para que coincidan con el orden deseado
+        # Usamos la lista 'concept_cols_present' que ya tiene el orden correcto y los conceptos existentes
+        pivot_table = pivot_table.reindex(concept_cols_present).dropna(how='all')
 
         # Mostrar la tabla en Streamlit
         st.dataframe(
@@ -314,3 +332,4 @@ else:
         summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
         summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'), y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')), color=alt.Color('Clasificacion:N', title='Clasificación'), tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Clasificacion:N'), alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')]).properties(height=350, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(summary_chart, use_container_width=True)
+
