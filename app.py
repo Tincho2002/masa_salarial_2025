@@ -303,8 +303,9 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN CON COLUMN_CONFIG ---
-    # 1. Lista de todas las columnas de moneda
+    # --- SOLUCIÓN ROBUSTA Y EXPLÍCITA CON COLUMN_CONFIG ---
+    
+    # 1. Definir columnas de moneda y enteras
     currency_columns = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
@@ -316,31 +317,29 @@ else:
         'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
+    integer_columns = ['Nro. de Legajo', 'Dotación']
 
-    # 2. Crear el diccionario de configuración dinámicamente
+    # 2. Crear el diccionario de configuración de forma exhaustiva
     column_configuration = {}
-
-    # 3. Añadir formato para columnas de moneda
-    for col_name in currency_columns:
-        if col_name in df_filtered.columns:
-            column_configuration[col_name] = st.column_config.NumberColumn(
-                label=col_name,
+    for col in df_filtered.columns:
+        if col in currency_columns:
+            # Configurar como número con formato de moneda
+            column_configuration[col] = st.column_config.NumberColumn(
+                label=col,
                 format="$ {:,.2f}"
             )
+        elif col in integer_columns:
+            # Configurar como número entero
+            column_configuration[col] = st.column_config.NumberColumn(
+                label=col,
+                format="%d"
+            )
+        else:
+            # El resto, como texto (comportamiento por defecto)
+            # No es necesario definirlas explícitamente a menos que se quiera cambiar el label
+            pass
     
-    # 4. Añadir formato específico para columnas enteras
-    if 'Nro. de Legajo' in df_filtered.columns:
-        column_configuration['Nro. de Legajo'] = st.column_config.NumberColumn(
-            label="Nro. de Legajo",
-            format="%d"
-        )
-    if 'Dotación' in df_filtered.columns:
-        column_configuration['Dotación'] = st.column_config.NumberColumn(
-            label="Dotación",
-            format="%d"
-        )
-    
-    # 5. Mostrar el dataframe con la configuración nativa de Streamlit
+    # 3. Mostrar el dataframe con la configuración explícita
     st.dataframe(
         df_filtered,
         column_config=column_configuration,
@@ -353,10 +352,15 @@ if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    summary_column_config = {
-        col: st.column_config.NumberColumn(format="$ {:,.2f}")
-        for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
-    }
+    # Crear la configuración de columnas de forma explícita para evitar inestabilidad
+    summary_column_config = {}
+    for col in summary_df.columns:
+        if pd.api.types.is_numeric_dtype(summary_df[col]):
+            summary_column_config[col] = st.column_config.NumberColumn(
+                label=col,
+                format="$ {:,.2f}"
+            )
+    
     st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
     
     summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
