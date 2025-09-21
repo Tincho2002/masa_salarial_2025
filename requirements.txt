@@ -2,6 +2,8 @@
 streamlit
 pandas
 altair
+fpdf2
 
 -- Dependencia para leer archivos Excel (.xlsx) --
 openpyxl
+
