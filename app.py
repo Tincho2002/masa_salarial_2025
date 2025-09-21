@@ -336,7 +336,6 @@ else:
             )
         else:
             # El resto, como texto (comportamiento por defecto)
-            # No es necesario definirlas explícitamente a menos que se quiera cambiar el label
             pass
     
     # 3. Mostrar el dataframe con la configuración explícita
