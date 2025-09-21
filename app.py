@@ -43,7 +43,6 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
-/* SE HA ELIMINADO LA REGLA DE CSS PARA ALINEACIÓN */
 </style>
 """, unsafe_allow_html=True)
 
@@ -186,7 +185,6 @@ else:
         st.altair_chart(line_chart, use_container_width=True)
     with col_table1:
         masa_mensual_display = masa_mensual[['Mes', 'Total Mensual']].copy()
-        # **CAMBIO AQUÍ**: Aplicar formato y estilo con Pandas Styler
         st.dataframe(
             masa_mensual_display.style.format({"Total Mensual": "${:,.2f}"})
                                       .set_properties(subset=["Total Mensual"], **{'text-align': 'right'}),
@@ -211,7 +209,6 @@ else:
         st.altair_chart(bar_chart, use_container_width=True)
     with col_table2:
         gerencia_data_display = gerencia_data.copy()
-        # **CAMBIO AQUÍ**: Aplicar formato y estilo con Pandas Styler
         st.dataframe(
             gerencia_data_display.style.format({"Total Mensual": "${:,.2f}"})
                                         .set_properties(subset=["Total Mensual"], **{'text-align': 'right'}),
@@ -236,7 +233,6 @@ else:
         st.altair_chart(donut_chart, use_container_width=True)
     with col_table3:
         clasificacion_data_display = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy()
-        # **CAMBIO AQUÍ**: Aplicar formato y estilo con Pandas Styler
         st.dataframe(
             clasificacion_data_display.style.format({"Total Mensual": "${:,.2f}"})
                                              .set_properties(subset=["Total Mensual"], **{'text-align': 'right'}),
@@ -248,22 +244,26 @@ else:
     st.subheader("Tabla de Datos Detallados")
     df_display = df_filtered.copy()
     
-    # **CAMBIO AQUÍ**: Definir columnas y aplicar formato y estilo con Pandas Styler
     currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
     integer_columns = ['Nro. de Legajo', 'Dotación']
 
+    # **INICIA LA CORRECCIÓN PUNTUAL**
     format_mapper = {}
+    # Mantener el formato simple para columnas de moneda
     for col in currency_columns:
         if col in df_display.columns:
             format_mapper[col] = "${:,.2f}"
+    
+    # Usar una función lambda más segura para columnas de enteros que pueden ser nulas
     for col in integer_columns:
         if col in df_display.columns:
-            format_mapper[col] = "{:,.0f}"
-
+            format_mapper[col] = lambda x: f"{int(x):,}" if pd.notna(x) else ""
+    # **TERMINA LA CORRECCIÓN PUNTUAL**
+    
     columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_display.columns]
 
     st.dataframe(
-        df_display.style.format(format_mapper, na_rep="")
+        df_display.style.format(format_mapper) # Ya no se necesita na_rep="", la lambda lo maneja
                         .set_properties(subset=columns_to_align_right, **{'text-align': 'right'}),
         use_container_width=True
     )
@@ -273,7 +273,6 @@ if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    # **CAMBIO AQUÍ**: Aplicar formato y estilo con Pandas Styler
     summary_df_display = summary_df.reset_index().copy()
     summary_currency_cols = [
         col for col in summary_df_display.columns
