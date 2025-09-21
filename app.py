@@ -92,14 +92,9 @@ def load_data(url):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
-        # Se asegura que las columnas enteras sean del tipo correcto
+        # Se asegura que la dotación también sea numérica
         if 'Dotación' in df.columns:
-            df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
-        
-        if 'Nro. de Legajo' in df.columns:
-             df['Nro. de Legajo'] = pd.to_numeric(df['Nro. de Legajo'], errors='coerce')
-             # Usar Int64 (capital 'I') para permitir valores nulos (NaN) si los hubiera
-             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype('Int64')
+            df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0)
 
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
@@ -109,6 +104,9 @@ def load_data(url):
         for col in key_filter_columns:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
+        
+        if 'Nro. de Legajo' in df.columns:
+             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype(str).str.strip()
         
         df.reset_index(drop=True, inplace=True)
         return df
@@ -225,7 +223,7 @@ else:
         st.dataframe(
             masa_mensual[['Mes', 'Total Mensual']],
             column_config={
-                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
+                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
             },
             hide_index=True,
             use_container_width=True,
@@ -261,7 +259,7 @@ else:
         st.dataframe(
             gerencia_data,
             column_config={
-                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
+                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
             },
             hide_index=True,
             use_container_width=True,
@@ -287,13 +285,13 @@ else:
         ).configure_view(
             fill='transparent'
         )
-        st.altair_chart( donut_chart, use_container_width=True)
+        st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
         st.dataframe(
             clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}),
             column_config={
-                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
+                "Total Mensual": st.column_config.NumberColumn(format="$ {:,.2f}")
             },
             hide_index=True,
             use_container_width=True,
@@ -304,10 +302,7 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN ROBUSTA Y EXPLÍCITA CON COLUMN_CONFIG ---
-    
-    # 1. Definir columnas de moneda y enteras
-    currency_columns = [
+    detailed_table_cols = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
         'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.',
@@ -318,49 +313,36 @@ else:
         'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
-    integer_columns = ['Nro. de Legajo', 'Dotación']
-
-    # 2. Crear el diccionario de configuración de forma exhaustiva
-    column_configuration = {}
-    for col in df_filtered.columns:
-        if col in currency_columns:
-            # Configurar como número con formato de moneda
-            column_configuration[col] = st.column_config.NumberColumn(
-                label=col,
-                format="$,.2f" 
-            )
-        elif col in integer_columns:
-            # Configurar como número entero
-            column_configuration[col] = st.column_config.NumberColumn(
-                label=col,
-                format="%d"
-            )
-        else:
-            # El resto de columnas (texto) no necesita configuración especial
-            pass
     
-    # 3. Mostrar el dataframe con la configuración explícita
+    column_configuration = {}
+    for col_name in detailed_table_cols:
+        if col_name in df_filtered.columns:
+            column_configuration[col_name] = st.column_config.NumberColumn(
+                label=col_name,
+                format="$ %.2f"
+            )
+            
+    if 'Dotación' in df_filtered.columns:
+        column_configuration['Dotación'] = st.column_config.NumberColumn(
+            label="Dotación",
+            format="%d"
+        )
+    
     st.dataframe(
         df_filtered,
         column_config=column_configuration,
         use_container_width=True
     )
 
-
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    # Crear la configuración de columnas de forma explícita para evitar inestabilidad
-    summary_column_config = {}
-    for col in summary_df.columns:
-        if pd.api.types.is_numeric_dtype(summary_df[col]):
-            summary_column_config[col] = st.column_config.NumberColumn(
-                label=col,
-                format="$,.2f"
-            )
-    
+    summary_column_config = {
+        col: st.column_config.NumberColumn(format="$ {:,.2f}")
+        for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
+    }
     st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
     
     summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
@@ -385,4 +367,3 @@ if summary_df is not None:
         fill='transparent'
     )
     st.altair_chart(summary_chart, use_container_width=True)
-
