@@ -56,25 +56,53 @@ def to_excel(df):
     processed_data = output.getvalue()
     return processed_data
 
+# **INICIA FUNCIÓN DE PDF MEJORADA**
 def to_pdf(df):
+    """Convierte un DataFrame a un archivo PDF bien formateado usando HTML."""
+    
+    # Convertir el dataframe a una tabla HTML básica
+    html_table = df.to_html(index=False, border=0)
+
+    # Crear un documento HTML completo con estilos CSS para el PDF
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <meta charset="UTF-8">
+    <style>
+        body {{
+            font-family: "Arial", sans-serif;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+        }}
+        th, td {{
+            padding: 5px 4px;
+            text-align: left;
+            border: 1px solid #dddddd;
+            font-size: 7px; /* Letra pequeña para que quepan todas las columnas */
+        }}
+        thead th {{
+            background-color: #f2f2f2;
+            font-size: 8px;
+            font-weight: bold;
+        }}
+    </style>
+    </head>
+    <body>
+        <h2>Reporte de Datos Detallados</h2>
+        {html_table}
+    </body>
+    </html>
+    """
+    
     pdf = FPDF(orientation='L', unit='mm', format='A3')
     pdf.add_page()
-    pdf.set_font('Arial', '', 8)
+    pdf.write_html(html_content)
     
-    cols = df.columns
-    col_width = pdf.w / (len(cols) + 1)
-    for col in cols:
-        pdf.cell(col_width, 10, str(col), border=1)
-    pdf.ln()
-
-    for index, row in df.iterrows():
-        for col in cols:
-            cell_text = str(row[col]).encode('latin-1', 'replace').decode('latin-1')
-            pdf.cell(col_width, 10, cell_text, border=1)
-        pdf.ln()
-    
-    # **CAMBIO**: Convertir explícitamente la salida a bytes
     return bytes(pdf.output())
+# **TERMINA FUNCIÓN DE PDF MEJORADA**
 
 # --- CARGA DE DATOS ---
 @st.cache_data
@@ -227,7 +255,7 @@ else:
         with col_btn1:
             st.download_button(
                 label="📥 Descargar como CSV",
-                data=df_display.to_csv(index=False).encode('utf-8'), 
+                data=df_display.to_csv(index=False).encode('utf-8'),
                 file_name='datos_detallados.csv',
                 mime='text/csv',
                 use_container_width=True
