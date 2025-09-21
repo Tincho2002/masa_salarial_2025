@@ -188,7 +188,7 @@ else:
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height1,
-            padding=25  # <-- CAMBIO AQUÍ
+            padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}  # <-- CAMBIO AQUÍ
         ).configure_view(fill='transparent')
         st.altair_chart(line_chart, use_container_width=True)
     with col_table1:
@@ -209,7 +209,7 @@ else:
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height2,
-            padding=25  # <-- CAMBIO AQUÍ
+            padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}  # <-- CAMBIO AQUÍ
         ).configure_view(fill='transparent')
         st.altair_chart(bar_chart, use_container_width=True)
     with col_table2:
@@ -230,7 +230,7 @@ else:
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height3,
-            padding=25  # <-- CAMBIO AQUÍ
+            padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}  # <-- CAMBIO AQUÍ
         ).configure_view(fill='transparent')
         st.altair_chart(donut_chart, use_container_width=True)
     with col_table3:
@@ -270,6 +270,6 @@ if summary_df is not None:
         tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Clasificacion:N'), alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')]
     ).properties(
         height=350,
-        padding=25  # <-- CAMBIO AQUÍ
+        padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}  # <-- CAMBIO AQUÍ
     ).configure_view(fill='transparent')
     st.altair_chart(summary_chart, use_container_width=True)
