@@ -194,7 +194,8 @@ else:
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height1,
-            padding=25 # SOLUCIÓN: Padding interno del gráfico
+            # SOLUCIÓN DEFINITIVA: Padding interno con el formato correcto
+            padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
         ).configure_view(
             fill='transparent'
         )
@@ -204,7 +205,6 @@ else:
         masa_mensual_styled = masa_mensual[['Mes', 'Total Mensual']].style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        # SOLUCIÓN: Ajustar altura de la tabla para balance visual
         st.dataframe(masa_mensual_styled, use_container_width=True, height=chart_height1 - 10)
 
     st.markdown("---")
@@ -221,12 +221,13 @@ else:
         bar_chart = alt.Chart(gerencia_data).mark_bar().encode(
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None,
-                    axis=alt.Axis(labelLimit=120) # Blindaje contra desborde de texto
+                    axis=alt.Axis(labelLimit=120)
                    ),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height2,
-            padding=25 # SOLUCIÓN: Padding interno del gráfico
+            # SOLUCIÓN DEFINITIVA: Padding interno con el formato correcto
+            padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
         ).configure_view(
             fill='transparent'
         )
@@ -236,7 +237,6 @@ else:
         gerencia_data_styled = gerencia_data.style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        # SOLUCIÓN: Ajustar altura de la tabla para balance visual
         st.dataframe(gerencia_data_styled, use_container_width=True, height=chart_height2 - 10)
 
     st.markdown("---")
@@ -254,7 +254,8 @@ else:
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         ).properties(
             height=chart_height3,
-            padding=25 # SOLUCIÓN: Padding interno del gráfico
+            # SOLUCIÓN DEFINITIVA: Padding interno con el formato correcto
+            padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
         ).configure_view(
             fill='transparent'
         )
@@ -266,7 +267,6 @@ else:
         ).style.format({
             "Total Mensual": "${:,.2f}"
         }).hide(axis="index")
-        # SOLUCIÓN: Ajustar altura de la tabla para balance visual
         st.dataframe(clasificacion_data_styled, use_container_width=True, height=chart_height3 - 10)
 
 
@@ -292,7 +292,6 @@ if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    # st.subheader("Tabla de Resumen Anual por Clasificación") # Título redundante
     summary_formatters = {
         col: "${:,.2f}"
         for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
@@ -305,7 +304,6 @@ if summary_df is not None:
         value_name='Masa Salarial'
     )
     
-    # st.subheader("Gráfico de Resumen Anual") # Título redundante
     summary_chart = alt.Chart(summary_chart_data).mark_bar().encode(
         x=alt.X('Mes:N', sort=summary_chart_data['Mes'].dropna().unique().tolist(), title='Mes'),
         y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
@@ -317,7 +315,8 @@ if summary_df is not None:
         ]
     ).properties(
         height=350,
-        padding=25 # SOLUCIÓN: Padding interno del gráfico
+        # SOLUCIÓN DEFINITIVA: Padding interno con el formato correcto
+        padding={'top': 20, 'bottom': 20, 'left': 15, 'right': 15}
     ).configure_view(
         fill='transparent'
     )
