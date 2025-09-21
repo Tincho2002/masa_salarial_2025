@@ -43,13 +43,6 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
-/* Alineación de texto en tablas */
-.stDataFrame div[data-testid="stDataFrameContainer"] div[data-testid="stTable"] td {
-    text-align: right !important;
-}
-.stDataFrame div[data-testid="stDataFrameContainer"] div[data-testid="stTable"] thead th {
-    text-align: center !important;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -105,6 +98,7 @@ def load_data(url):
         
         if 'Nro. de Legajo' in df.columns:
              df['Nro. de Legajo'] = pd.to_numeric(df['Nro. de Legajo'], errors='coerce')
+             # Usar Int64 (capital 'I') para permitir valores nulos (NaN) si los hubiera
              df['Nro. de Legajo'] = df['Nro. de Legajo'].astype('Int64')
 
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
@@ -229,7 +223,10 @@ else:
     
     with col_table1:
         st.dataframe(
-            masa_mensual[['Mes', 'Total Mensual']].style.format({"Total Mensual": "${:,.2f}"}),
+            masa_mensual[['Mes', 'Total Mensual']],
+            column_config={
+                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
+            },
             hide_index=True,
             use_container_width=True,
             height=chart_height1 - 10
@@ -262,7 +259,10 @@ else:
         
     with col_table2:
         st.dataframe(
-            gerencia_data.style.format({"Total Mensual": "${:,.2f}"}),
+            gerencia_data,
+            column_config={
+                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
+            },
             hide_index=True,
             use_container_width=True,
             height=chart_height2 - 10
@@ -287,11 +287,14 @@ else:
         ).configure_view(
             fill='transparent'
         )
-        st.altair_chart(donut_chart, use_container_width=True)
+        st.altair_chart( donut_chart, use_container_width=True)
 
     with col_table3:
         st.dataframe(
-            clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).style.format({"Total Mensual": "${:,.2f}"}),
+            clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}),
+            column_config={
+                "Total Mensual": st.column_config.NumberColumn(format="$,.2f")
+            },
             hide_index=True,
             use_container_width=True,
             height=chart_height3 - 10
@@ -301,8 +304,7 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # Aplicar formato a un subconjunto del dataframe para mostrar
-    df_display = df_filtered.copy()
+    # --- SOLUCIÓN ROBUSTA Y EXPLÍCITA CON COLUMN_CONFIG ---
     
     # 1. Definir columnas de moneda y enteras
     currency_columns = [
@@ -316,17 +318,33 @@ else:
         'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
-    
-    # Crear diccionario de formateadores
-    formatters = {}
-    for col in currency_columns:
-        if col in df_display.columns:
-            formatters[col] = "${:,.2f}"
+    integer_columns = ['Nro. de Legajo', 'Dotación']
 
-    # Aplicar estilos
-    styler = df_display.style.format(formatters)
+    # 2. Crear el diccionario de configuración de forma exhaustiva
+    column_configuration = {}
+    for col in df_filtered.columns:
+        if col in currency_columns:
+            # Configurar como número con formato de moneda
+            column_configuration[col] = st.column_config.NumberColumn(
+                label=col,
+                format="$,.2f" # SINTAXIS CORRECTA
+            )
+        elif col in integer_columns:
+            # Configurar como número entero
+            column_configuration[col] = st.column_config.NumberColumn(
+                label=col,
+                format="%d"
+            )
+        else:
+            # El resto de columnas (texto) no necesita configuración especial
+            pass
     
-    st.dataframe(styler, use_container_width=True)
+    # 3. Mostrar el dataframe con la configuración explícita
+    st.dataframe(
+        df_filtered,
+        column_config=column_configuration,
+        use_container_width=True
+    )
 
 
 # --- Sección de Resumen Anual ---
@@ -334,11 +352,16 @@ if summary_df is not None:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos de Control)")
     
-    summary_formatters = {
-        col: "${:,.2f}"
-        for col in summary_df.columns if pd.api.types.is_numeric_dtype(summary_df[col])
-    }
-    st.dataframe(summary_df.style.format(summary_formatters), use_container_width=True)
+    # Crear la configuración de columnas de forma explícita para evitar inestabilidad
+    summary_column_config = {}
+    for col in summary_df.columns:
+        if pd.api.types.is_numeric_dtype(summary_df[col]):
+            summary_column_config[col] = st.column_config.NumberColumn(
+                label=col,
+                format="$,.2f" # SINTAXIS CORRECTA
+            )
+    
+    st.dataframe(summary_df, column_config=summary_column_config, use_container_width=True)
     
     summary_chart_data = summary_df.drop(columns=['Total general'], errors='ignore').reset_index().melt(
         id_vars='Mes',
