@@ -43,6 +43,29 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
+/* Estilos para la tabla HTML renderizada manualmente */
+.custom-html-table-container {
+    height: 500px; /* Altura fija para la tabla detallada */
+    overflow: auto; /* Scroll en ambas direcciones si es necesario */
+}
+.custom-html-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-color);
+}
+.custom-html-table th, .custom-html-table td {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    text-align: left;
+    white-space: nowrap;
+}
+.custom-html-table thead th {
+    background-color: #f0f2f6;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -288,9 +311,10 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN DEFINITIVA Y ROBUSTA ---
-    # Se utiliza el Styler de Pandas, el mismo método que en las tablas de resumen,
-    # que es el criterio correcto, estable y unificado.
+    # --- SOLUCIÓN FINAL ---
+    # Se utiliza el método que funciona en las otras tablas: Styler de Pandas.
+    # El error anterior se debía a una incompatibilidad específica que se resuelve
+    # al aplicar el formato de manera controlada.
     
     # 1. Lista de todas las columnas que deben tener formato de moneda.
     detailed_table_cols = [
