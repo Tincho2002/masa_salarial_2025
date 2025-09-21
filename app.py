@@ -378,3 +378,4 @@ if summary_df is not None:
         fill='transparent'
     )
     st.altair_chart(summary_chart, use_container_width=True)
+
