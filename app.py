@@ -43,12 +43,6 @@ h1, h2, h3 {
     color: var(--primary-color);
     font-family: var(--font);
 }
-
-/* --- SOLUCIÓN DE ALINEACIÓN --- */
-/* Fuerza la alineación del texto a la derecha en las celdas de la tabla de datos */
-.stDataFrame table td {
-    text-align: right;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -98,9 +92,13 @@ def load_data(url):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
-        # Se asegura que la dotación también sea numérica
+        # Se asegura que las columnas enteras sean del tipo correcto
         if 'Dotación' in df.columns:
-            df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0)
+            df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
+        
+        if 'Nro. de Legajo' in df.columns:
+             df['Nro. de Legajo'] = pd.to_numeric(df['Nro. de Legajo'], errors='coerce')
+             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype('Int64') # Int64 para soportar nulos
 
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
@@ -110,9 +108,6 @@ def load_data(url):
         for col in key_filter_columns:
             if col in df.columns:
                 df[col] = df[col].astype(str).str.strip()
-        
-        if 'Nro. de Legajo' in df.columns:
-             df['Nro. de Legajo'] = df['Nro. de Legajo'].astype(str).str.strip()
         
         df.reset_index(drop=True, inplace=True)
         return df
@@ -308,12 +303,9 @@ else:
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
     
-    # --- SOLUCIÓN ROBUSTA PARA FORMATEO Y ALINEACIÓN ---
-    # Se crea una copia para no alterar el dataframe original
-    df_display = df_filtered.copy()
-
-    # Columnas que necesitan formato de moneda
-    detailed_table_cols = [
+    # --- SOLUCIÓN CON COLUMN_CONFIG ---
+    # 1. Lista de todas las columnas de moneda
+    currency_columns = [
         'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
         'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
         'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.',
@@ -324,17 +316,37 @@ else:
         'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
         'Asignaciones Familiares 1.4.', 'Total Mensual'
     ]
-    
-    # Se aplica el formato directamente a los datos, convirtiéndolos en texto
-    for col_name in detailed_table_cols:
-        if col_name in df_display.columns:
-            df_display[col_name] = df_display[col_name].map('${:,.2f}'.format)
 
-    # Se muestra la tabla con los datos ya formateados. La alineación se controla con el CSS de arriba.
+    # 2. Crear el diccionario de configuración dinámicamente
+    column_configuration = {}
+
+    # 3. Añadir formato para columnas de moneda
+    for col_name in currency_columns:
+        if col_name in df_filtered.columns:
+            column_configuration[col_name] = st.column_config.NumberColumn(
+                label=col_name,
+                format="$ {:,.2f}"
+            )
+    
+    # 4. Añadir formato específico para columnas enteras
+    if 'Nro. de Legajo' in df_filtered.columns:
+        column_configuration['Nro. de Legajo'] = st.column_config.NumberColumn(
+            label="Nro. de Legajo",
+            format="%d"
+        )
+    if 'Dotación' in df_filtered.columns:
+        column_configuration['Dotación'] = st.column_config.NumberColumn(
+            label="Dotación",
+            format="%d"
+        )
+    
+    # 5. Mostrar el dataframe con la configuración nativa de Streamlit
     st.dataframe(
-        df_display,
+        df_filtered,
+        column_config=column_configuration,
         use_container_width=True
     )
+
 
 # --- Sección de Resumen Anual ---
 if summary_df is not None:
