@@ -74,12 +74,28 @@ def load_data(url):
                     7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
         df['Mes'] = df['Mes_Num'].map(meses_es)
 
-        # MODIFICACIÓN: Añadir todas las columnas de moneda a la conversión numérica
-        currency_cols = ['Total Mensual', 'Dotación', 'Total Sujeto a Retención']
+        # MODIFICACIÓN: Lista exhaustiva de todas las columnas de moneda
+        currency_cols = [
+            'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
+            'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
+            'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.',
+            'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad',
+            'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras',
+            'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes',
+            'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.',
+            'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
+            'Asignaciones Familiares 1.4.', 'Total Mensual'
+        ]
+        
+        # Se convierte cada columna a numérica, si existe en el dataframe
         for col in currency_cols:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
+        # Se asegura que la dotación también sea numérica
+        if 'Dotación' in df.columns:
+            df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0)
+
         df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
 
         key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
@@ -272,23 +288,34 @@ else:
 
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
-    # MODIFICACIÓN: Aplicar formato de moneda a las columnas relevantes
+    
+    # MODIFICACIÓN: Crear dinámicamente la configuración para todas las columnas de moneda
+    detailed_table_cols = [
+        'Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes',
+        'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas',
+        'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.',
+        'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad',
+        'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras',
+        'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes',
+        'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.',
+        'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.',
+        'Asignaciones Familiares 1.4.', 'Total Mensual'
+    ]
+    
+    column_config = {
+        col: st.column_config.NumberColumn(
+            f"{col} ($)",
+            format="$ {:,.2f}",
+        )
+        for col in detailed_table_cols if col in df_filtered.columns
+    }
+    
+    # Añadir configuración para columnas no monetarias
+    column_config["Dotación"] = st.column_config.NumberColumn(format="%d")
+
     st.dataframe(
         df_filtered,
-        column_config={
-            "Total Mensual": st.column_config.NumberColumn(
-                "Total Mensual ($)",
-                format="$ {:,.2f}",
-            ),
-            "Total Sujeto a Retención": st.column_config.NumberColumn(
-                "Total Sujeto a Retención ($)",
-                format="$ {:,.2f}",
-            ),
-            "Dotación": st.column_config.NumberColumn(
-                "Dotación",
-                format="%d"
-            )
-        },
+        column_config=column_config,
         use_container_width=True
     )
 
