@@ -171,9 +171,40 @@ else:
     st.subheader("Evolución Mensual de la Masa Salarial")
     col_chart1, col_table1 = st.columns([2, 1])
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
+    
+    # --- INICIO: CÁLCULO DE ESCALA DINÁMICA DEL EJE Y ---
+    y_domain = [0, 1] 
+    if not masa_mensual.empty:
+        min_val = masa_mensual['Total Mensual'].min()
+        max_val = masa_mensual['Total Mensual'].max()
+        
+        if min_val == max_val:
+            padding = min_val * 0.1
+            y_domain = [min_val - padding, max_val + padding]
+        else:
+            padding = (max_val - min_val) * 0.1
+            y_domain = [min_val - padding, max_val + padding]
+        
+        if y_domain[0] < 0 and min_val >= 0:
+            y_domain[0] = 0
+
+    y_scale = alt.Scale(domain=y_domain)
+    # --- FIN: CÁLCULO DE ESCALA DINÁMICA DEL EJE Y ---
+
     chart_height1 = (len(masa_mensual) + 1) * 35 + 3
     with col_chart1:
-        line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'), y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'), scale=alt.Scale(domainMin=3000000000, domainMax=8000000000)), tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]).properties(height=chart_height1, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+        line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
+            x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'), 
+            y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'), scale=y_scale), 
+            tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
+        ).properties(
+            height=chart_height1, 
+            padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}
+        ).configure(
+            background='transparent'
+        ).configure_view(
+            fill='transparent'
+        )
         st.altair_chart(line_chart, use_container_width=True)
     with col_table1:
         st.dataframe(masa_mensual[['Mes', 'Total Mensual']].copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1)
