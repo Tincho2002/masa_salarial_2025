@@ -306,7 +306,6 @@ else:
         st.dataframe(table_display_data.copy().style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
     st.write("")
     
-    # --- INICIO MODIFICACIÓN: Gráfico y Tabla para Masa Salarial por Concepto ---
     st.markdown("---")
     st.subheader("Masa Salarial por Concepto")
     concept_columns_to_pivot = [
@@ -333,7 +332,12 @@ else:
         col_chart_concepto, col_table_concepto = st.columns([2, 1])
 
         with col_chart_concepto:
-            chart_data_concepto = pivot_table.reset_index().sort_values('Total general', ascending=False)
+            # --- INICIO CORRECCIÓN 1: Excluir "Total Mensual" del gráfico ---
+            chart_data_concepto = pivot_table.reset_index()
+            chart_data_concepto = chart_data_concepto[chart_data_concepto['Concepto'] != 'Total Mensual']
+            chart_data_concepto = chart_data_concepto.sort_values('Total general', ascending=False)
+            # --- FIN CORRECCIÓN 1 ---
+            
             chart_height_concepto = (len(chart_data_concepto) + 1) * 35 + 3
             
             bar_chart_concepto = alt.Chart(chart_data_concepto).mark_bar().encode(
@@ -351,16 +355,15 @@ else:
             st.altair_chart(bar_chart_concepto, use_container_width=True)
 
         with col_table_concepto:
+            # La altura de la tabla se ajusta a la del gráfico, que ya no tiene "Total Mensual"
             st.dataframe(
                 pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), 
                 use_container_width=True,
-                height=chart_height_concepto
+                height=chart_height_concepto + 35 # Se agrega espacio para la fila extra de la tabla
             )
     else:
         st.info("No hay datos de conceptos para mostrar con los filtros seleccionados.")
-    # --- FIN MODIFICACIÓN ---
 
-    # --- INICIO MODIFICACIÓN: Gráfico y Tabla para SIPAF ---
     st.markdown("---")
     st.subheader("Resumen por Concepto (SIPAF)")
     df_filtered.columns = df_filtered.columns.str.strip().str.replace(r"\s+", " ", regex=True)
@@ -393,8 +396,12 @@ else:
         col_chart_sipaf, col_table_sipaf = st.columns([2, 1])
         
         with col_chart_sipaf:
-            # Excluir la fila de total para el gráfico
-            chart_data_sipaf = pivot_table_sipaf.drop('Total general').reset_index().sort_values('Total general', ascending=False)
+            chart_data_sipaf = pivot_table_sipaf.drop('Total general').reset_index()
+            # --- INICIO CORRECCIÓN 2: Renombrar columna para evitar "undefined" ---
+            chart_data_sipaf = chart_data_sipaf.rename(columns={'index': 'Concepto'})
+            # --- FIN CORRECCIÓN 2 ---
+            chart_data_sipaf = chart_data_sipaf.sort_values('Total general', ascending=False)
+            
             chart_height_sipaf = (len(chart_data_sipaf) + 1) * 35 + 3
 
             bar_chart_sipaf = alt.Chart(chart_data_sipaf).mark_bar().encode(
@@ -412,7 +419,6 @@ else:
             st.altair_chart(bar_chart_sipaf, use_container_width=True)
 
         with col_table_sipaf:
-            # La altura de la tabla necesita espacio extra para la fila de total
             table_height_sipaf = chart_height_sipaf + 35 
             st.dataframe(
                 pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}),
@@ -421,7 +427,6 @@ else:
             )
     else:
         st.info("No hay datos de conceptos SIPAF para mostrar con los filtros seleccionados.")
-    # --- FIN MODIFICACIÓN ---
 
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
@@ -469,7 +474,6 @@ else:
         columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_page.columns]
         st.dataframe(df_page.style.format(format_mapper, na_rep="").set_properties(subset=columns_to_align_right, **{'text-align': 'right'}), use_container_width=True, hide_index=True)
 
-    # --- INICIO MODIFICACIÓN: Layout para Resumen Anual ---
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos Filtrados)")
     
@@ -535,5 +539,4 @@ else:
                 fill='transparent'
             )
             st.altair_chart(summary_chart, use_container_width=True)
-    # --- FIN MODIFICACIÓN ---
 
