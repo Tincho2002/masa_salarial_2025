@@ -3,6 +3,7 @@ import pandas as pd
 import altair as alt
 from io import BytesIO
 from fpdf import FPDF
+import numpy as np
 
 # --- Configuración de la página ---
 st.set_page_config(layout="wide")
@@ -231,22 +232,77 @@ else:
     st.subheader("Distribución por Clasificación")
     col_chart3, col_table3 = st.columns([2, 1])
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
-    chart_height3 = (len(clasificacion_data) + 1) * 35 + 3
+    
     with col_chart3:
-        base_chart3 = alt.Chart(clasificacion_data).transform_window(
-            total_sum='sum(Total Mensual)'
+        chart_height = 400
+        
+        # Base chart with calculations for angles
+        base = alt.Chart(clasificacion_data).transform_joinaggregate(
+            total='sum(Total Mensual)',
         ).transform_calculate(
-            percentage="datum['Total Mensual'] / datum.total_sum"
+            percentage="datum['Total Mensual'] / datum.total"
+        ).transform_stack(
+            'percentage',
+            as_=['stack_start', 'stack_end'],
+            sort=[alt.SortField('Total Mensual', order='descending')]
+        ).transform_calculate(
+            start_angle='datum.stack_start * 2 * PI',
+            end_angle='datum.stack_end * 2 * PI',
+            mid_angle='(datum.start_angle + datum.end_angle) / 2'
         )
-        donut = base_chart3.mark_arc(innerRadius=80).encode(
-            theta=alt.Theta("Total Mensual:Q", stack=True),
-            color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
-            tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f'), alt.Tooltip('percentage:Q', format='.2%')]
+
+        # Donut chart layer
+        donut = base.mark_arc(innerRadius=80, outerRadius=120).encode(
+            theta=alt.Theta('start_angle:Q', axis=None),
+            theta2='end_angle:Q',
+            color=alt.Color('Clasificacion_Ministerio:N', title='Clasificación'),
+            tooltip=[
+                alt.Tooltip('Clasificacion_Ministerio:N'),
+                alt.Tooltip('Total Mensual:Q', format='$,.2f'),
+                alt.Tooltip('percentage:Q', format='.2%')
+            ]
         )
-        donut_chart = donut.properties(height=chart_height3, padding={'top': 25, 'left': 25, 'right': 25, 'bottom': 25}).configure(background='transparent').configure_view(fill='transparent')
+
+        # A second base for labels to switch to x/y encoding
+        label_base = base.transform_calculate(
+            x_outer='cos(datum.mid_angle) * 120',
+            y_outer='sin(datum.mid_angle) * 120',
+            x_line_end='cos(datum.mid_angle) * 140',
+            y_line_end='sin(datum.mid_angle) * 140',
+            x_text='cos(datum.mid_angle) * 145',
+            y_text='sin(datum.mid_angle) * 145',
+            align="(datum.mid_angle > PI / 2 && datum.mid_angle < 3 * PI / 2) ? 'right' : 'left'"
+        )
+
+        # Leader lines layer
+        lines = label_base.mark_rule(color='gray').encode(
+            x=alt.X('x_outer:Q', axis=None),
+            y=alt.Y('y_outer:Q', axis=None),
+            x2='x_line_end:Q',
+            y2='y_line_end:Q',
+        )
+
+        # Text layer
+        text = label_base.mark_text(fontSize=12).encode(
+            x='x_text:Q',
+            y='y_text:Q',
+            text=alt.Text('percentage:Q', format='.1%'),
+            align=alt.Align('align:N')
+        )
+
+        donut_chart = (donut + lines + text).properties(
+            height=chart_height,
+            width=chart_height
+        ).configure_view(
+            stroke=None
+        ).configure(
+            background='transparent'
+        )
         st.altair_chart(donut_chart, use_container_width=True)
+
     with col_table3:
-        st.dataframe(clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height3)
+        table_height = (len(clasificacion_data) + 1) * 35 + 3
+        st.dataframe(clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
     st.write("")
     
     # --- INICIO: TABLA DINÁMICA GENERAL POR CONCEPTO ---
