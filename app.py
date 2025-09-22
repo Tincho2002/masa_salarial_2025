@@ -233,6 +233,9 @@ else:
     col_chart3, col_table3 = st.columns([2, 1])
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
     
+    # Sort the data using pandas before creating the chart
+    clasificacion_data = clasificacion_data.sort_values('Total Mensual', ascending=False)
+
     with col_chart3:
         chart_height = 400
         
@@ -243,8 +246,7 @@ else:
             percentage="datum['Total Mensual'] / datum.total"
         ).transform_stack(
             'percentage',
-            as_=['stack_start', 'stack_end'],
-            sort=[alt.SortField('Total Mensual', order='descending')]
+            as_=['stack_start', 'stack_end']
         ).transform_calculate(
             start_angle='datum.stack_start * 2 * PI',
             end_angle='datum.stack_end * 2 * PI',
