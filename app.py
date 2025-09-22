@@ -331,48 +331,60 @@ else:
         st.info("No hay datos de conceptos para mostrar con los filtros seleccionados.")
     # --- FIN: TABLA DINÁMICA GENERAL POR CONCEPTO ---
 
-    # --- INICIO: NUEVA TABLA DINÁMICA FILTRADA (SIPAF) ---
-    st.markdown("---")
-    st.subheader("Resumen por Concepto (SIPAF)")
+# --- INICIO: NUEVA TABLA DINÁMICA FILTRADA (SIPAF) ---
+st.markdown("---")
+st.subheader("Resumen por Concepto (SIPAF)")
 
-    concept_columns_sipaf = [
-        'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.',
-        'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.',
-        'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.'
-    ]
-    
-    # --- LÓGICA REESCRITA DESDE CERO PARA GARANTIZAR ESTABILIDAD ---
-    if not df_filtered.empty:
-        # 1. Crear una copia de trabajo y asegurarse de que todas las columnas existan, rellenando con 0 si faltan.
-        temp_df = df_filtered.copy()
-        for col in concept_columns_sipaf:
-            if col not in temp_df.columns:
-                temp_df[col] = 0
+# Normalizar nombres de columnas para evitar problemas de puntos o espacios
+df_filtered.columns = df_filtered.columns.str.strip().str.replace(r"\s+", " ", regex=True)
 
-        # 2. Agrupar directamente por mes y sumar los conceptos. Rellenar los NaNs con 0.
-        #    Este es el método más directo y robusto.
-        sipaf_pivot = temp_df.groupby(['Mes', 'Mes_Num'])[concept_columns_sipaf].sum().fillna(0)
-        
-        # 3. Ordenar los meses correctamente y transponer la tabla para el formato deseado.
-        sipaf_pivot = sipaf_pivot.reset_index().sort_values('Mes_Num').set_index('Mes')[concept_columns_sipaf].T
+# Lista de conceptos esperados (sin depender de puntos)
+concept_columns_sipaf = [
+    'Retribución Cargo 1.1.1', 'Antigüedad 1.1.3', 'Retribuciones Extraordinarias 1.3.1',
+    'Contribuciones Patronales 1.3.3', 'SAC 1.3.2', 'SAC 1.1.4',
+    'Contribuciones Patronales 1.1.6', 'Complementos 1.1.7', 'Asignaciones Familiares 1.4'
+]
 
-        # 4. Asegurar que todos los meses seleccionados estén presentes como columnas.
-        meses_en_datos = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
-        sipaf_pivot = sipaf_pivot.reindex(columns=meses_en_datos, fill_value=0)
+# Buscar columnas que contengan esos conceptos (ej. "S.A.C." o "SAC")
+sipaf_cols_present = []
+for col in df_filtered.columns:
+    for expected in concept_columns_sipaf:
+        if expected.lower().replace(".", "") in col.lower().replace(".", ""):
+            sipaf_cols_present.append(col)
 
-        # 5. Calcular el total por concepto y el total general.
-        sipaf_pivot['Total general'] = sipaf_pivot.sum(axis=1)
-        total_row = sipaf_pivot.sum().rename('Total general')
-        sipaf_pivot = pd.concat([sipaf_pivot, total_row.to_frame().T])
+if sipaf_cols_present:
+    df_melted_sipaf = df_filtered.melt(
+        id_vars=['Mes', 'Mes_Num'],
+        value_vars=sipaf_cols_present,
+        var_name='Concepto',
+        value_name='Monto'
+    )
+    pivot_table_sipaf = pd.pivot_table(
+        df_melted_sipaf, values='Monto', index='Concepto', columns='Mes',
+        aggfunc='sum', fill_value=0
+    )
 
-        # 6. Mostrar la tabla final con el formato correcto.
-        st.dataframe(
-            sipaf_pivot.style.format("${:,.2f}", na_rep="$0.00").set_properties(**{'text-align': 'right'}),
-            use_container_width=True
-        )
-    else:
-        st.info("No hay datos de conceptos SIPAF para mostrar con los filtros seleccionados.")
-    # --- FIN: NUEVA TABLA DINÁMICA FILTRADA (SIPAF) ---
+    meses_en_datos_sipaf = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
+    for mes in meses_en_datos_sipaf:
+        if mes not in pivot_table_sipaf.columns:
+            pivot_table_sipaf[mes] = 0
+    if all(mes in pivot_table_sipaf.columns for mes in meses_en_datos_sipaf):
+        pivot_table_sipaf = pivot_table_sipaf[meses_en_datos_sipaf]
+
+    pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
+    pivot_table_sipaf = pivot_table_sipaf.dropna(how='all')
+
+    if not pivot_table_sipaf.empty:
+        total_row = pivot_table_sipaf.sum().rename('Total general')
+        pivot_table_sipaf = pd.concat([pivot_table_sipaf, total_row.to_frame().T])
+
+    st.dataframe(
+        pivot_table_sipaf.style.format("${:,.2f}", na_rep="").set_properties(**{'text-align': 'right'}),
+        use_container_width=True
+    )
+else:
+    st.info("No hay datos de conceptos SIPAF para mostrar con los filtros seleccionados.")
+# --- FIN: NUEVA TABLA DINÁMICA FILTRADA (SIPAF) ---
     
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
@@ -469,4 +481,5 @@ else:
             fill='transparent'
         )
         st.altair_chart(summary_chart, use_container_width=True)
+
 
