@@ -341,39 +341,35 @@ else:
         'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.'
     ]
     
-    # --- LOGICA DE PIVOT DEFINITIVA Y ROBUSTA ---
+    # --- LÓGICA REESCRITA DESDE CERO PARA GARANTIZAR ESTABILIDAD ---
     if not df_filtered.empty:
-        # 1. Preparar los datos de origen, asegurando que todas las columnas de conceptos existan.
+        # 1. Lista de conceptos requeridos.
+        
+        # 2. Crear una copia de trabajo y asegurarse de que todas las columnas existan, rellenando con 0 si faltan.
         temp_df = df_filtered.copy()
         for col in concept_columns_sipaf:
             if col not in temp_df.columns:
                 temp_df[col] = 0
-        
-        # 2. Seleccionar solo las columnas necesarias y rellenar NaNs con 0. ESTE ES EL PASO CLAVE.
-        sipaf_data = temp_df[['Mes', 'Mes_Num'] + concept_columns_sipaf].fillna(0)
-        
-        # 3. Agrupar por mes y sumar los valores.
-        monthly_sums = sipaf_data.groupby(['Mes', 'Mes_Num'])[concept_columns_sipaf].sum().reset_index()
-        
-        # 4. Ordenar por mes
-        monthly_sums = monthly_sums.sort_values('Mes_Num')
 
-        # 5. Pivotar la tabla para tener meses como columnas y conceptos como filas
-        pivot_table_sipaf = monthly_sums.set_index('Mes')[concept_columns_sipaf].T
+        # 3. Agrupar directamente por mes y sumar los conceptos. Rellenar los NaNs con 0.
+        #    Este es el método más directo y robusto.
+        sipaf_pivot = temp_df.groupby(['Mes', 'Mes_Num'])[concept_columns_sipaf].sum().fillna(0)
         
-        # 6. Reordenar las filas (conceptos) y columnas (meses) para asegurar el orden correcto y la presencia de todos los elementos
-        meses_en_datos_sipaf = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
-        pivot_table_sipaf = pivot_table_sipaf.reindex(index=concept_columns_sipaf, fill_value=0)
-        pivot_table_sipaf = pivot_table_sipaf.reindex(columns=meses_en_datos_sipaf, fill_value=0)
+        # 4. Ordenar los meses correctamente y transponer la tabla para el formato deseado.
+        sipaf_pivot = sipaf_pivot.reset_index().sort_values('Mes_Num').set_index('Mes')[concept_columns_sipaf].T
 
-        # 7. Calcular totales
-        pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
-        total_row = pivot_table_sipaf.sum().rename('Total general')
-        pivot_table_sipaf = pd.concat([pivot_table_sipaf, total_row.to_frame().T])
-        
-        # 8. Mostrar la tabla final
+        # 5. Asegurar que todos los meses seleccionados estén presentes como columnas.
+        meses_en_datos = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
+        sipaf_pivot = sipaf_pivot.reindex(columns=meses_en_datos, fill_value=0)
+
+        # 6. Calcular el total por concepto y el total general.
+        sipaf_pivot['Total general'] = sipaf_pivot.sum(axis=1)
+        total_row = sipaf_pivot.sum().rename('Total general')
+        sipaf_pivot = pd.concat([sipaf_pivot, total_row.to_frame().T])
+
+        # 7. Mostrar la tabla final con el formato correcto.
         st.dataframe(
-            pivot_table_sipaf.style.format("${:,.2f}", na_rep="$0.00").set_properties(**{'text-align': 'right'}),
+            sipaf_pivot.style.format("${:,.2f}", na_rep="$0.00").set_properties(**{'text-align': 'right'}),
             use_container_width=True
         )
     else:
