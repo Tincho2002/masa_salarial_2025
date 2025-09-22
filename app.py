@@ -306,6 +306,7 @@ else:
         st.dataframe(table_display_data.copy().style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
     st.write("")
     
+    # --- INICIO MODIFICACIÓN: Gráfico y Tabla para Masa Salarial por Concepto ---
     st.markdown("---")
     st.subheader("Masa Salarial por Concepto")
     concept_columns_to_pivot = [
@@ -329,13 +330,37 @@ else:
         pivot_table['Total general'] = pivot_table.sum(axis=1)
         pivot_table = pivot_table.reindex(concept_cols_present).dropna(how='all')
         
-        st.dataframe(
-            pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), 
-            use_container_width=True
-        )
+        col_chart_concepto, col_table_concepto = st.columns([2, 1])
+
+        with col_chart_concepto:
+            chart_data_concepto = pivot_table.reset_index().sort_values('Total general', ascending=False)
+            chart_height_concepto = (len(chart_data_concepto) + 1) * 35 + 3
+            
+            bar_chart_concepto = alt.Chart(chart_data_concepto).mark_bar().encode(
+                x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+                y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
+                tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
+            ).properties(
+                height=chart_height_concepto,
+                padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}
+            ).configure(
+                background='transparent'
+            ).configure_view(
+                fill='transparent'
+            )
+            st.altair_chart(bar_chart_concepto, use_container_width=True)
+
+        with col_table_concepto:
+            st.dataframe(
+                pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), 
+                use_container_width=True,
+                height=chart_height_concepto
+            )
     else:
         st.info("No hay datos de conceptos para mostrar con los filtros seleccionados.")
+    # --- FIN MODIFICACIÓN ---
 
+    # --- INICIO MODIFICACIÓN: Gráfico y Tabla para SIPAF ---
     st.markdown("---")
     st.subheader("Resumen por Concepto (SIPAF)")
     df_filtered.columns = df_filtered.columns.str.strip().str.replace(r"\s+", " ", regex=True)
@@ -364,12 +389,39 @@ else:
         if not pivot_table_sipaf.empty:
             total_row = pivot_table_sipaf.sum().rename('Total general')
             pivot_table_sipaf = pd.concat([pivot_table_sipaf, total_row.to_frame().T])
-        st.dataframe(
-            pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}),
-            use_container_width=True
-        )
+        
+        col_chart_sipaf, col_table_sipaf = st.columns([2, 1])
+        
+        with col_chart_sipaf:
+            # Excluir la fila de total para el gráfico
+            chart_data_sipaf = pivot_table_sipaf.drop('Total general').reset_index().sort_values('Total general', ascending=False)
+            chart_height_sipaf = (len(chart_data_sipaf) + 1) * 35 + 3
+
+            bar_chart_sipaf = alt.Chart(chart_data_sipaf).mark_bar().encode(
+                x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+                y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
+                tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
+            ).properties(
+                height=chart_height_sipaf,
+                padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}
+            ).configure(
+                background='transparent'
+            ).configure_view(
+                fill='transparent'
+            )
+            st.altair_chart(bar_chart_sipaf, use_container_width=True)
+
+        with col_table_sipaf:
+            # La altura de la tabla necesita espacio extra para la fila de total
+            table_height_sipaf = chart_height_sipaf + 35 
+            st.dataframe(
+                pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}),
+                use_container_width=True,
+                height=table_height_sipaf
+            )
     else:
         st.info("No hay datos de conceptos SIPAF para mostrar con los filtros seleccionados.")
+    # --- FIN MODIFICACIÓN ---
 
     st.markdown("---")
     st.subheader("Tabla de Datos Detallados")
@@ -408,19 +460,16 @@ else:
         currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
         integer_columns = ['Nro. de Legajo', 'Dotación', 'Ceco']
         
-        # --- INICIO CORRECCIÓN DEL ERROR ---
-        # Se aplica el formato a los números usando funciones seguras que
-        # evitan el ValueError cuando encuentran datos no numéricos.
         currency_formatter = lambda x: f"${format_number_es(x)}"
         format_mapper = {col: currency_formatter for col in currency_columns if col in df_page.columns}
         for col in integer_columns:
             if col in df_page.columns:
-                format_mapper[col] = format_integer_es # Usar la nueva función segura
-        # --- FIN CORRECCIÓN DEL ERROR ---
+                format_mapper[col] = format_integer_es
         
         columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_page.columns]
         st.dataframe(df_page.style.format(format_mapper, na_rep="").set_properties(subset=columns_to_align_right, **{'text-align': 'right'}), use_container_width=True, hide_index=True)
 
+    # --- INICIO MODIFICACIÓN: Layout para Resumen Anual ---
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos Filtrados)")
     
@@ -436,48 +485,55 @@ else:
     summary_df_display = summary_df_filtered.reset_index().copy()
     
     if not summary_df_display.empty:
-        numeric_cols = summary_df_display.select_dtypes(include=np.number).columns
-        if 'Total general' not in summary_df_display.columns and len(numeric_cols) > 0:
-            summary_df_display['Total general'] = summary_df_display[numeric_cols].sum(axis=1)
+        col_chart_anual, col_table_anual = st.columns([2, 1])
 
-        total_row = summary_df_display.select_dtypes(include=np.number).sum().rename('Total')
-        summary_df_display = pd.concat([summary_df_display, total_row.to_frame().T], ignore_index=True)
-        summary_df_display.iloc[-1, summary_df_display.columns.get_loc('Mes')] = 'Total'
+        with col_table_anual:
+            numeric_cols = summary_df_display.select_dtypes(include=np.number).columns
+            if 'Total general' not in summary_df_display.columns and len(numeric_cols) > 0:
+                summary_df_display['Total general'] = summary_df_display[numeric_cols].sum(axis=1)
 
-        summary_currency_cols = [col for col in summary_df_display.columns if col != 'Mes' and pd.api.types.is_numeric_dtype(summary_df_display[col])]
-        summary_format_mapper = {col: lambda x: f"${format_number_es(x)}" for col in summary_currency_cols}
-        st.dataframe(summary_df_display.style.format(summary_format_mapper, na_rep="").set_properties(subset=summary_currency_cols, **{'text-align': 'right'}), use_container_width=True, hide_index=True)
-        
-        summary_chart_data = summary_df_filtered.reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
-        
-        mes_sort_order = summary_chart_data['Mes'].dropna().unique().tolist()
+            total_row = summary_df_display.select_dtypes(include=np.number).sum().rename('Total')
+            summary_df_display = pd.concat([summary_df_display, total_row.to_frame().T], ignore_index=True)
+            summary_df_display.iloc[-1, summary_df_display.columns.get_loc('Mes')] = 'Total'
 
-        bar_chart = alt.Chart(summary_chart_data).mark_bar().encode(
-            x=alt.X('Mes:N', sort=mes_sort_order, title='Mes'),
-            y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
-            color=alt.Color('Clasificacion:N', title='Clasificación'),
-            tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Clasificacion:N'), alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')]
-        )
+            summary_currency_cols = [col for col in summary_df_display.columns if col != 'Mes' and pd.api.types.is_numeric_dtype(summary_df_display[col])]
+            summary_format_mapper = {col: lambda x: f"${format_number_es(x)}" for col in summary_currency_cols}
+            
+            table_height_anual = 350 + 40
+            st.dataframe(summary_df_display.style.format(summary_format_mapper, na_rep="").set_properties(subset=summary_currency_cols, **{'text-align': 'right'}), use_container_width=True, hide_index=True, height=table_height_anual)
         
-        text_labels = alt.Chart(summary_chart_data).transform_aggregate(
-            total_masa_salarial='sum(Masa Salarial)',
-            groupby=['Mes']
-        ).mark_text(
-            dy=-8,
-            align='center',
-            color='black'
-        ).encode(
-            x=alt.X('Mes:N', sort=mes_sort_order),
-            y=alt.Y('total_masa_salarial:Q'),
-            text=alt.Text('total_masa_salarial:Q', format='$,.2s')
-        )
-        
-        summary_chart = (bar_chart + text_labels).properties(
-            height=350, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}
-        ).configure(
-            background='transparent'
-        ).configure_view(
-            fill='transparent'
-        )
-        st.altair_chart(summary_chart, use_container_width=True)
+        with col_chart_anual:
+            summary_chart_data = summary_df_filtered.reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
+            
+            mes_sort_order = summary_chart_data['Mes'].dropna().unique().tolist()
+
+            bar_chart = alt.Chart(summary_chart_data).mark_bar().encode(
+                x=alt.X('Mes:N', sort=mes_sort_order, title='Mes'),
+                y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+                color=alt.Color('Clasificacion:N', title='Clasificación'),
+                tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Clasificacion:N'), alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')]
+            )
+            
+            text_labels = alt.Chart(summary_chart_data).transform_aggregate(
+                total_masa_salarial='sum(Masa Salarial)',
+                groupby=['Mes']
+            ).mark_text(
+                dy=-8,
+                align='center',
+                color='black'
+            ).encode(
+                x=alt.X('Mes:N', sort=mes_sort_order),
+                y=alt.Y('total_masa_salarial:Q'),
+                text=alt.Text('total_masa_salarial:Q', format='$,.2s')
+            )
+            
+            summary_chart = (bar_chart + text_labels).properties(
+                height=350, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}
+            ).configure(
+                background='transparent'
+            ).configure_view(
+                fill='transparent'
+            )
+            st.altair_chart(summary_chart, use_container_width=True)
+    # --- FIN MODIFICACIÓN ---
 
