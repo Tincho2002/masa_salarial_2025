@@ -172,39 +172,32 @@ else:
     col_chart1, col_table1 = st.columns([2, 1])
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     
-    # --- INICIO: CÁLCULO DE ESCALA DINÁMICA DEL EJE Y ---
     y_domain = [0, 1] 
     if not masa_mensual.empty:
         min_val = masa_mensual['Total Mensual'].min()
         max_val = masa_mensual['Total Mensual'].max()
-        
-        if min_val == max_val:
-            padding = min_val * 0.1
-            y_domain = [min_val - padding, max_val + padding]
-        else:
-            padding = (max_val - min_val) * 0.1
-            y_domain = [min_val - padding, max_val + padding]
-        
-        if y_domain[0] < 0 and min_val >= 0:
-            y_domain[0] = 0
-
+        padding = (max_val - min_val) * 0.2
+        y_domain = [min_val - padding, max_val + padding]
+        if y_domain[0] < 0 and min_val >= 0: y_domain[0] = 0
     y_scale = alt.Scale(domain=y_domain)
-    # --- FIN: CÁLCULO DE ESCALA DINÁMICA DEL EJE Y ---
 
     chart_height1 = (len(masa_mensual) + 1) * 35 + 3
     with col_chart1:
-        line_chart = alt.Chart(masa_mensual).mark_line(point=True, strokeWidth=3).encode(
+        base_chart1 = alt.Chart(masa_mensual).transform_window(
+            total_sum='sum(Total Mensual)'
+        ).transform_calculate(
+            percentage="datum['Total Mensual'] / datum.total_sum",
+            label_text="format(datum['Total Mensual'] / 1000000000, ',.2f') + 'G (' + format(datum.percentage, '.1%') + ')'"
+        )
+        line = base_chart1.mark_line(point=True, strokeWidth=3).encode(
             x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'), 
             y=alt.Y('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'), scale=y_scale), 
             tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
-        ).properties(
-            height=chart_height1, 
-            padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}
-        ).configure(
-            background='transparent'
-        ).configure_view(
-            fill='transparent'
         )
+        text = base_chart1.mark_text(align='center', baseline='bottom', dy=-10).encode(
+            x=alt.X('Mes:N', sort=meses_ordenados), y=alt.Y('Total Mensual:Q', scale=y_scale), text='label_text:N'
+        )
+        line_chart = (line + text).properties(height=chart_height1, padding={'top': 35, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(line_chart, use_container_width=True)
     with col_table1:
         st.dataframe(masa_mensual[['Mes', 'Total Mensual']].copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1)
@@ -215,7 +208,21 @@ else:
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
     chart_height2 = (len(gerencia_data) + 1) * 35 + 3
     with col_chart2:
-        bar_chart = alt.Chart(gerencia_data).mark_bar().encode(x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')), y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelLimit=120)), tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]).properties(height=chart_height2, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+        base_chart2 = alt.Chart(gerencia_data).transform_window(
+            total_sum='sum(Total Mensual)'
+        ).transform_calculate(
+            percentage="datum['Total Mensual'] / datum.total_sum",
+            label_text="format(datum['Total Mensual'] / 1000000000, ',.2f') + 'G (' + format(datum.percentage, '.1%') + ')'"
+        )
+        bar = base_chart2.mark_bar().encode(
+            x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+            y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelLimit=120)),
+            tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
+        )
+        text = base_chart2.mark_text(align='left', baseline='middle', dx=5).encode(
+            x='Total Mensual:Q', y=alt.Y('Gerencia:N', sort='-x'), text='label_text:N', color=alt.value('black')
+        )
+        bar_chart = (bar + text).properties(height=chart_height2, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(bar_chart, use_container_width=True)
     with col_table2:
         st.dataframe(gerencia_data.copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height2)
@@ -226,7 +233,20 @@ else:
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
     chart_height3 = (len(clasificacion_data) + 1) * 35 + 3
     with col_chart3:
-        donut_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=80).encode(theta=alt.Theta("Total Mensual:Q"), color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"), tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]).properties(height=chart_height3, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+        base_chart3 = alt.Chart(clasificacion_data).transform_window(
+            total_sum='sum(Total Mensual)'
+        ).transform_calculate(
+            percentage="datum['Total Mensual'] / datum.total_sum"
+        )
+        donut = base_chart3.mark_arc(innerRadius=80).encode(
+            theta=alt.Theta("Total Mensual:Q", stack=True),
+            color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
+            tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f'), alt.Tooltip('percentage:Q', format='.2%')]
+        )
+        text = base_chart3.mark_text(radiusOffset=30, fontSize=12).encode(
+            theta=alt.Theta("Total Mensual:Q", stack=True), text=alt.Text("percentage:Q", format=".1%"),
+        )
+        donut_chart = (donut + text).properties(height=chart_height3, padding={'top': 25, 'left': 25, 'right': 25, 'bottom': 25}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(donut_chart, use_container_width=True)
     with col_table3:
         st.dataframe(clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height3)
