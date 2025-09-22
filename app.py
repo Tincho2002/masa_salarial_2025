@@ -48,7 +48,7 @@ h1, h2, h3 {
 """, unsafe_allow_html=True)
 
 
-# --- INICIO CORRECCIÓN 1: Formato de Números ---
+# --- INICIO CORRECCIÓN: Formato de Números ---
 
 # Define una configuración regional para que los gráficos de Altair usen
 # punto para miles y coma para decimales.
@@ -73,7 +73,17 @@ def format_number_es(num):
     # Intercambia los separadores
     return s.replace(",", "TEMP").replace(".", ",").replace("TEMP", ".")
 
-# --- FIN CORRECCIÓN 1 ---
+def format_integer_es(num):
+    """
+    Formatea un número entero al estilo español (puntos para miles).
+    """
+    if pd.isna(num) or not isinstance(num, (int, float, np.number)):
+        return ""
+    # Convierte a entero, formatea con comas, y reemplaza comas por puntos.
+    s = f"{int(num):,}"
+    return s.replace(",", ".")
+
+# --- FIN CORRECCIÓN ---
 
 
 # --- FUNCIONES DE EXPORTACIÓN ---
@@ -142,11 +152,6 @@ def load_data(url):
             df[col] = df[col].astype(str).str.strip()
     df.reset_index(drop=True, inplace=True)
     return df
-
-# --- INICIO CORRECCIÓN 2: Eliminar carga de datos de resumen estático ---
-# La función load_summary_data() y su llamada se eliminan.
-# El resumen se generará dinámicamente a partir de los datos filtrados más adelante.
-# --- FIN CORRECCIÓN 2 ---
 
 FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
 df = load_data(FILE_URL)
@@ -226,7 +231,6 @@ else:
         if not masa_mensual_display.empty:
             total_row = pd.DataFrame([{'Mes': 'Total', 'Total Mensual': masa_mensual_display['Total Mensual'].sum()}])
             masa_mensual_display = pd.concat([masa_mensual_display, total_row], ignore_index=True)
-        # Aplicar formato de número corregido a la tabla
         st.dataframe(masa_mensual_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1)
     st.write("")
     st.markdown("---")
@@ -256,7 +260,6 @@ else:
         if not gerencia_data_display.empty:
             total_row = pd.DataFrame([{'Gerencia': 'Total', 'Total Mensual': gerencia_data_display['Total Mensual'].sum()}])
             gerencia_data_display = pd.concat([gerencia_data_display, total_row], ignore_index=True)
-        # Aplicar formato de número corregido a la tabla
         st.dataframe(gerencia_data_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height2)
     st.write("")
     st.markdown("---")
@@ -300,7 +303,6 @@ else:
             total_row = pd.DataFrame([{'Clasificación': 'Total', 'Total Mensual': table_display_data['Total Mensual'].sum()}])
             table_display_data = pd.concat([table_display_data, total_row], ignore_index=True)
         table_height = (len(table_display_data) + 1) * 35 + 3
-        # Aplicar formato de número corregido a la tabla
         st.dataframe(table_display_data.copy().style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
     st.write("")
     
@@ -327,7 +329,6 @@ else:
         pivot_table['Total general'] = pivot_table.sum(axis=1)
         pivot_table = pivot_table.reindex(concept_cols_present).dropna(how='all')
         
-        # Aplicar formato de número corregido a la tabla pivote
         st.dataframe(
             pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), 
             use_container_width=True
@@ -363,7 +364,6 @@ else:
         if not pivot_table_sipaf.empty:
             total_row = pivot_table_sipaf.sum().rename('Total general')
             pivot_table_sipaf = pd.concat([pivot_table_sipaf, total_row.to_frame().T])
-        # Aplicar formato de número corregido a la tabla pivote
         st.dataframe(
             pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}),
             use_container_width=True
@@ -387,7 +387,6 @@ else:
             df_pdf_raw = df_display[existing_pdf_cols]
             df_pdf_formatted = df_pdf_raw.copy()
             df_pdf_formatted['Período'] = df_pdf_formatted['Período'].dt.strftime('%Y-%m')
-            # Aplicar formato de número corregido para el PDF
             df_pdf_formatted['Total Mensual'] = df_pdf_formatted['Total Mensual'].apply(lambda x: f"${format_number_es(x)}")
             st.download_button(label="📥 PDF (Resumen)", data=to_pdf(df_pdf_formatted, selected_mes), file_name='resumen_detallado.pdf', mime='application/pdf', use_container_width=True)
         
@@ -409,20 +408,22 @@ else:
         currency_columns = ['Total Sujeto a Retención', 'Vacaciones', 'Alquiler', 'Horas Extras', 'Nómina General con Aportes', 'Cs. Sociales s/Remunerativos', 'Cargas Sociales Ant.', 'IC Pagado', 'Vacaciones Pagadas', 'Cargas Sociales s/Vac. Pagadas', 'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.', 'Contribuciones Patronales', 'Gratificación por Antigüedad', 'Gratificación por Jubilación', 'Total No Remunerativo', 'SAC Horas Extras', 'Cargas Sociales SAC Hextras', 'SAC Pagado', 'Cargas Sociales s/SAC Pagado', 'Cargas Sociales Antigüedad', 'Nómina General sin Aportes', 'Gratificación Única y Extraordinaria', 'Gastos de Representación', 'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.', 'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.', 'Total Mensual']
         integer_columns = ['Nro. de Legajo', 'Dotación', 'Ceco']
         
-        # Aplicar formato de número corregido a la tabla detallada
+        # --- INICIO CORRECCIÓN DEL ERROR ---
+        # Se aplica el formato a los números usando funciones seguras que
+        # evitan el ValueError cuando encuentran datos no numéricos.
         currency_formatter = lambda x: f"${format_number_es(x)}"
         format_mapper = {col: currency_formatter for col in currency_columns if col in df_page.columns}
         for col in integer_columns:
-            if col in df_page.columns: format_mapper[col] = "{:,.0f}".replace(",", ".") # Para enteros, solo cambiar separador de miles
+            if col in df_page.columns:
+                format_mapper[col] = format_integer_es # Usar la nueva función segura
+        # --- FIN CORRECCIÓN DEL ERROR ---
         
         columns_to_align_right = [col for col in currency_columns + integer_columns if col in df_page.columns]
         st.dataframe(df_page.style.format(format_mapper, na_rep="").set_properties(subset=columns_to_align_right, **{'text-align': 'right'}), use_container_width=True, hide_index=True)
 
-    # --- INICIO CORRECCIÓN 2: Sección de Resumen Anual dinámica ---
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos Filtrados)")
     
-    # Se genera la tabla pivote de resumen a partir del dataframe ya filtrado (df_filtered)
     summary_df_filtered = pd.pivot_table(
         df_filtered,
         values='Total Mensual',
@@ -435,25 +436,20 @@ else:
     summary_df_display = summary_df_filtered.reset_index().copy()
     
     if not summary_df_display.empty:
-        # Agregar columna y fila de totales
         numeric_cols = summary_df_display.select_dtypes(include=np.number).columns
         if 'Total general' not in summary_df_display.columns and len(numeric_cols) > 0:
             summary_df_display['Total general'] = summary_df_display[numeric_cols].sum(axis=1)
 
         total_row = summary_df_display.select_dtypes(include=np.number).sum().rename('Total')
         summary_df_display = pd.concat([summary_df_display, total_row.to_frame().T], ignore_index=True)
-        # Asegurarse de que el índice -1 (la nueva fila total) tenga la etiqueta 'Total'
         summary_df_display.iloc[-1, summary_df_display.columns.get_loc('Mes')] = 'Total'
 
-        # Aplicar formato de número corregido a la tabla de resumen
         summary_currency_cols = [col for col in summary_df_display.columns if col != 'Mes' and pd.api.types.is_numeric_dtype(summary_df_display[col])]
         summary_format_mapper = {col: lambda x: f"${format_number_es(x)}" for col in summary_currency_cols}
         st.dataframe(summary_df_display.style.format(summary_format_mapper, na_rep="").set_properties(subset=summary_currency_cols, **{'text-align': 'right'}), use_container_width=True, hide_index=True)
         
-        # Gráfico de barras apiladas con los datos filtrados
         summary_chart_data = summary_df_filtered.reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
         
-        # El orden de los meses se toma de los datos filtrados para mantener la consistencia
         mes_sort_order = summary_chart_data['Mes'].dropna().unique().tolist()
 
         bar_chart = alt.Chart(summary_chart_data).mark_bar().encode(
@@ -484,4 +480,4 @@ else:
             fill='transparent'
         )
         st.altair_chart(summary_chart, use_container_width=True)
-    # --- FIN CORRECCIÓN 2 ---
+
