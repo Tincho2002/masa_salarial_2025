@@ -4,6 +4,7 @@ import altair as alt
 from io import BytesIO
 from fpdf import FPDF
 import numpy as np
+import plotly.graph_objects as go
 
 # --- Configuración de la página ---
 st.set_page_config(layout="wide")
@@ -233,79 +234,33 @@ else:
     col_chart3, col_table3 = st.columns([2, 1])
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
     
-    # Rename column to be valid field name in altair/vega-lite
-    clasificacion_data.rename(columns={'Total Mensual': 'Total_Mensual'}, inplace=True)
-
     with col_chart3:
-        chart_height = 400
-        
-        # Base chart with calculations for angles
-        base = alt.Chart(clasificacion_data).transform_joinaggregate(
-            total='sum(Total_Mensual)',
-        ).transform_calculate(
-            percentage="datum.Total_Mensual / datum.total"
-        ).transform_stack(
-            'percentage',
-            as_=['stack_start', 'stack_end'],
-            sort=[alt.SortField('Total_Mensual', order='descending')]
-        ).transform_calculate(
-            start_angle='datum.stack_start * 2 * PI',
-            end_angle='datum.stack_end * 2 * PI',
-            mid_angle='(datum.start_angle + datum.end_angle) / 2'
-        )
+        # --- ALTERNATIVA CON PLOTLY ---
+        # Se utiliza Plotly como alternativa debido a errores persistentes con Altair para este tipo de gráfico.
+        # Plotly ofrece una solución más robusta para gráficos de torta/anillo.
+        fig = go.Figure(data=[go.Pie(
+            labels=clasificacion_data['Clasificacion_Ministerio'],
+            values=clasificacion_data['Total Mensual'],
+            hole=.4,  # Esto lo convierte en un gráfico de anillo
+            textinfo='percent',
+            hoverinfo='label+percent+value',
+            hovertemplate='%{label}<br>$%{value:,.2f}<br>%{percent}<extra></extra>',
+            marker=dict(line=dict(color='#ffffff', width=2)) # Lineas blancas entre sectores
+        )])
 
-        # Donut chart layer
-        donut = base.mark_arc(innerRadius=80, outerRadius=120).encode(
-            theta=alt.Theta('start_angle:Q', axis=None),
-            theta2='end_angle:Q',
-            color=alt.Color('Clasificacion_Ministerio:N', title='Clasificación'),
-            tooltip=[
-                alt.Tooltip('Clasificacion_Ministerio:N'),
-                alt.Tooltip('Total_Mensual:Q', format='$,.2f', title='Total Mensual'),
-                alt.Tooltip('percentage:Q', format='.2%')
-            ]
+        fig.update_layout(
+            showlegend=True,
+            legend_title_text='Clasificación',
+            height=400,
+            margin=dict(t=10, b=10, l=10, r=10),
+            paper_bgcolor='rgba(0,0,0,0)', # Fondo transparente
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color="var(--text-color)") # Usar color de texto del CSS
         )
-
-        # A second base for labels to switch to x/y encoding
-        label_base = base.transform_calculate(
-            x_outer='cos(datum.mid_angle) * 120',
-            y_outer='sin(datum.mid_angle) * 120',
-            x_line_end='cos(datum.mid_angle) * 140',
-            y_line_end='sin(datum.mid_angle) * 140',
-            x_text='cos(datum.mid_angle) * 145',
-            y_text='sin(datum.mid_angle) * 145',
-            align="(datum.mid_angle > PI / 2 && datum.mid_angle < 3 * PI / 2) ? 'right' : 'left'"
-        )
-
-        # Leader lines layer
-        lines = label_base.mark_rule(color='gray').encode(
-            x=alt.X('x_outer:Q', axis=None),
-            y=alt.Y('y_outer:Q', axis=None),
-            x2='x_line_end:Q',
-            y2='y_line_end:Q',
-        )
-
-        # Text layer
-        text = label_base.mark_text(fontSize=12).encode(
-            x='x_text:Q',
-            y='y_text:Q',
-            text=alt.Text('percentage:Q', format='.1%'),
-            align=alt.Align('align:N')
-        )
-
-        donut_chart = (donut + lines + text).properties(
-            height=chart_height,
-            width=chart_height
-        ).configure_view(
-            stroke=None
-        ).configure(
-            background='transparent'
-        )
-        st.altair_chart(donut_chart, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
     with col_table3:
-        # Rename back for display
-        table_data = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación', 'Total_Mensual': 'Total Mensual'})
+        table_data = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'})
         table_height = (len(table_data) + 1) * 35 + 3
         st.dataframe(table_data.copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
     st.write("")
