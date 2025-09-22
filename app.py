@@ -341,25 +341,25 @@ else:
         'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.'
     ]
     
-    sipaf_cols_present = [col for col in concept_columns_sipaf if col in df_filtered.columns]
+    temp_df_sipaf = df_filtered.copy()
+    for col in concept_columns_sipaf:
+        if col not in temp_df_sipaf.columns:
+            temp_df_sipaf[col] = 0
 
-    if sipaf_cols_present:
-        df_melted_sipaf = df_filtered.melt(
-            id_vars=['Mes', 'Mes_Num'], value_vars=sipaf_cols_present, var_name='Concepto', value_name='Monto'
-        )
+    df_melted_sipaf = temp_df_sipaf.melt(
+        id_vars=['Mes', 'Mes_Num'], value_vars=concept_columns_sipaf, var_name='Concepto', value_name='Monto'
+    )
+    
+    if not df_melted_sipaf.empty:
         pivot_table_sipaf = pd.pivot_table(
             df_melted_sipaf, values='Monto', index='Concepto', columns='Mes', aggfunc='sum', fill_value=0
         )
         
         meses_en_datos_sipaf = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
-        for mes in meses_en_datos_sipaf:
-            if mes not in pivot_table_sipaf.columns:
-                pivot_table_sipaf[mes] = 0
-        if all(mes in pivot_table_sipaf.columns for mes in meses_en_datos_sipaf):
-            pivot_table_sipaf = pivot_table_sipaf[meses_en_datos_sipaf]
+        pivot_table_sipaf = pivot_table_sipaf.reindex(columns=meses_en_datos_sipaf, fill_value=0)
+        pivot_table_sipaf = pivot_table_sipaf.reindex(index=concept_columns_sipaf).fillna(0)
 
         pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
-        pivot_table_sipaf = pivot_table_sipaf.reindex(concept_columns_sipaf).fillna(0)
         
         if not pivot_table_sipaf.empty:
             total_row = pivot_table_sipaf.sum().rename('Total general')
