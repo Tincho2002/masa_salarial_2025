@@ -236,15 +236,18 @@ else:
         base_chart3 = alt.Chart(clasificacion_data).transform_window(
             total_sum='sum(Total Mensual)'
         ).transform_calculate(
-            percentage="datum['Total Mensual'] / datum.total_sum"
+            percentage="datum['Total Mensual'] / datum.total_sum",
+            # Show label only if percentage is > 5% to avoid clutter
+            label_text_conditional="datum.percentage > 0.05 ? format(datum.percentage, '.1%') : ''"
         )
         donut = base_chart3.mark_arc(innerRadius=80).encode(
             theta=alt.Theta("Total Mensual:Q", stack=True),
             color=alt.Color("Clasificacion_Ministerio:N", title="Clasificación"),
             tooltip=[alt.Tooltip('Clasificacion_Ministerio:N'), alt.Tooltip('Total Mensual:Q', format='$,.2f'), alt.Tooltip('percentage:Q', format='.2%')]
         )
-        text = base_chart3.mark_text(radiusOffset=30, fontSize=12).encode(
-            theta=alt.Theta("Total Mensual:Q", stack=True), text=alt.Text("percentage:Q", format=".1%"),
+        text = base_chart3.mark_text(radiusOffset=20, fontSize=11).encode(
+            theta=alt.Theta("Total Mensual:Q", stack=True), 
+            text='label_text_conditional:N'
         )
         donut_chart = (donut + text).properties(height=chart_height3, padding={'top': 25, 'left': 25, 'right': 25, 'bottom': 25}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(donut_chart, use_container_width=True)
