@@ -234,34 +234,41 @@ else:
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
     
     with col_chart3:
-        # --- Gráfico de Anillo con Altair (Versión Estable) ---
-        # Se calculan los porcentajes en pandas para mayor estabilidad.
+        # --- Gráfico de Anillo con Altair (Versión Estable y Ordenada) ---
+        
+        # Ordenar datos para asegurar que el gráfico se muestre de forma ordenada.
+        clasificacion_data = clasificacion_data.sort_values('Total Mensual', ascending=False)
+        
+        # Calcular porcentajes en pandas para mayor estabilidad.
         total = clasificacion_data['Total Mensual'].sum()
         if total > 0:
             clasificacion_data['Porcentaje'] = (clasificacion_data['Total Mensual'] / total)
         else:
             clasificacion_data['Porcentaje'] = 0
 
-        pie_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=70, outerRadius=110).encode(
-            theta=alt.Theta(field="Total Mensual", type="quantitative"),
-            color=alt.Color(field="Clasificacion_Ministerio", type="nominal", title="Clasificación"),
+        base_chart = alt.Chart(clasificacion_data).encode(
+            theta=alt.Theta(field="Total Mensual", type="quantitative", stack=True),
+            color=alt.Color(field="Clasificacion_Ministerio", type="nominal", title="Clasificación",
+                            sort=alt.EncodingSortField(field="Total Mensual", order="descending")),
             tooltip=[
                 alt.Tooltip('Clasificacion_Ministerio', title='Clasificación'),
                 alt.Tooltip('Total Mensual', format='$,.2f'),
                 alt.Tooltip('Porcentaje', format='.2%')
             ]
         )
+
+        pie = base_chart.mark_arc(innerRadius=70, outerRadius=110)
         
-        # Etiqueta de texto para el porcentaje
-        text = pie_chart.mark_text(radius=140, size=12).encode(
+        # Etiqueta de texto para el porcentaje, alineada con cada sector.
+        text = base_chart.mark_text(radius=140, size=12, fill='black').encode(
             text=alt.condition(
                 alt.datum.Porcentaje > 0.03,  # Mostrar solo si es > 3%
                 alt.Text('Porcentaje:Q', format='.1%'),
-                alt.value('')
+                alt.value('') # Ocultar si es muy pequeño
             )
         )
 
-        final_chart = (pie_chart + text).properties(
+        final_chart = (pie + text).properties(
             height=400
         ).configure_view(
             stroke=None
@@ -273,7 +280,7 @@ else:
 
     with col_table3:
         table_data = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'})
-        # Excluimos la columna de porcentaje de la tabla
+        # Excluir la columna de porcentaje de la tabla
         table_display_data = table_data[['Clasificación', 'Total Mensual']]
         table_height = (len(table_display_data) + 1) * 35 + 3
         st.dataframe(table_display_data.copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
