@@ -322,11 +322,7 @@ else:
 
         pivot_table['Total general'] = pivot_table.sum(axis=1)
         pivot_table = pivot_table.reindex(concept_cols_present).dropna(how='all')
-        
-        #if not pivot_table.empty:
-            #total_row = pivot_table.sum().rename('Total general')
-            #pivot_table = pd.concat([pivot_table, total_row.to_frame().T])
-
+                
         st.dataframe(
             pivot_table.style.format("${:,.2f}", na_rep="").set_properties(**{'text-align': 'right'}), 
             use_container_width=True
@@ -484,6 +480,7 @@ else:
             fill='transparent'
         )
         st.altair_chart(summary_chart, use_container_width=True)
+
 
 
 
