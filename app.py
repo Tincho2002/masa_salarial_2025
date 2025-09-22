@@ -4,7 +4,6 @@ import altair as alt
 from io import BytesIO
 from fpdf import FPDF
 import numpy as np
-import plotly.graph_objects as go
 
 # --- Configuración de la página ---
 st.set_page_config(layout="wide")
@@ -235,34 +234,49 @@ else:
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
     
     with col_chart3:
-        # --- ALTERNATIVA CON PLOTLY ---
-        # Se utiliza Plotly como alternativa debido a errores persistentes con Altair para este tipo de gráfico.
-        # Plotly ofrece una solución más robusta para gráficos de torta/anillo.
-        fig = go.Figure(data=[go.Pie(
-            labels=clasificacion_data['Clasificacion_Ministerio'],
-            values=clasificacion_data['Total Mensual'],
-            hole=.4,  # Esto lo convierte en un gráfico de anillo
-            textinfo='percent',
-            hoverinfo='label+percent+value',
-            hovertemplate='%{label}<br>$%{value:,.2f}<br>%{percent}<extra></extra>',
-            marker=dict(line=dict(color='#ffffff', width=2)) # Lineas blancas entre sectores
-        )])
+        # --- Gráfico de Anillo con Altair (Versión Estable) ---
+        # Se calculan los porcentajes en pandas para mayor estabilidad.
+        total = clasificacion_data['Total Mensual'].sum()
+        if total > 0:
+            clasificacion_data['Porcentaje'] = (clasificacion_data['Total Mensual'] / total)
+        else:
+            clasificacion_data['Porcentaje'] = 0
 
-        fig.update_layout(
-            showlegend=True,
-            legend_title_text='Clasificación',
-            height=400,
-            margin=dict(t=10, b=10, l=10, r=10),
-            paper_bgcolor='rgba(0,0,0,0)', # Fondo transparente
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color="var(--text-color)") # Usar color de texto del CSS
+        pie_chart = alt.Chart(clasificacion_data).mark_arc(innerRadius=70, outerRadius=110).encode(
+            theta=alt.Theta(field="Total Mensual", type="quantitative"),
+            color=alt.Color(field="Clasificacion_Ministerio", type="nominal", title="Clasificación"),
+            tooltip=[
+                alt.Tooltip('Clasificacion_Ministerio', title='Clasificación'),
+                alt.Tooltip('Total Mensual', format='$,.2f'),
+                alt.Tooltip('Porcentaje', format='.2%')
+            ]
         )
-        st.plotly_chart(fig, use_container_width=True)
+        
+        # Etiqueta de texto para el porcentaje
+        text = pie_chart.mark_text(radius=140, size=12).encode(
+            text=alt.condition(
+                alt.datum.Porcentaje > 0.03,  # Mostrar solo si es > 3%
+                alt.Text('Porcentaje:Q', format='.1%'),
+                alt.value('')
+            )
+        )
+
+        final_chart = (pie_chart + text).properties(
+            height=400
+        ).configure_view(
+            stroke=None
+        ).configure(
+            background='transparent'
+        )
+        st.altair_chart(final_chart, use_container_width=True)
+
 
     with col_table3:
         table_data = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'})
-        table_height = (len(table_data) + 1) * 35 + 3
-        st.dataframe(table_data.copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
+        # Excluimos la columna de porcentaje de la tabla
+        table_display_data = table_data[['Clasificación', 'Total Mensual']]
+        table_height = (len(table_display_data) + 1) * 35 + 3
+        st.dataframe(table_display_data.copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
     st.write("")
     
     # --- INICIO: TABLA DINÁMICA GENERAL POR CONCEPTO ---
