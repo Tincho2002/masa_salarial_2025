@@ -233,20 +233,21 @@ else:
     col_chart3, col_table3 = st.columns([2, 1])
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
     
-    # Sort the data using pandas before creating the chart
-    clasificacion_data = clasificacion_data.sort_values('Total Mensual', ascending=False)
+    # Rename column to be valid field name in altair/vega-lite
+    clasificacion_data.rename(columns={'Total Mensual': 'Total_Mensual'}, inplace=True)
 
     with col_chart3:
         chart_height = 400
         
         # Base chart with calculations for angles
         base = alt.Chart(clasificacion_data).transform_joinaggregate(
-            total='sum(Total Mensual)',
+            total='sum(Total_Mensual)',
         ).transform_calculate(
-            percentage="datum['Total Mensual'] / datum.total"
+            percentage="datum.Total_Mensual / datum.total"
         ).transform_stack(
             'percentage',
-            as_=['stack_start', 'stack_end']
+            as_=['stack_start', 'stack_end'],
+            sort=[alt.SortField('Total_Mensual', order='descending')]
         ).transform_calculate(
             start_angle='datum.stack_start * 2 * PI',
             end_angle='datum.stack_end * 2 * PI',
@@ -260,7 +261,7 @@ else:
             color=alt.Color('Clasificacion_Ministerio:N', title='Clasificación'),
             tooltip=[
                 alt.Tooltip('Clasificacion_Ministerio:N'),
-                alt.Tooltip('Total Mensual:Q', format='$,.2f'),
+                alt.Tooltip('Total_Mensual:Q', format='$,.2f', title='Total Mensual'),
                 alt.Tooltip('percentage:Q', format='.2%')
             ]
         )
@@ -303,8 +304,10 @@ else:
         st.altair_chart(donut_chart, use_container_width=True)
 
     with col_table3:
-        table_height = (len(clasificacion_data) + 1) * 35 + 3
-        st.dataframe(clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación'}).copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
+        # Rename back for display
+        table_data = clasificacion_data.rename(columns={'Clasificacion_Ministerio': 'Clasificación', 'Total_Mensual': 'Total Mensual'})
+        table_height = (len(table_data) + 1) * 35 + 3
+        st.dataframe(table_data.copy().style.format({"Total Mensual": "${:,.2f}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
     st.write("")
     
     # --- INICIO: TABLA DINÁMICA GENERAL POR CONCEPTO ---
