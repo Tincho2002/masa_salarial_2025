@@ -338,47 +338,6 @@ else:
     # --- INICIO: NUEVA TABLA DINÁMICA FILTRADA (SIPAF) ---
     st.markdown("---")
     st.subheader("Resumen por Concepto (SIPAF)")
-
-    concept_columns_sipaf = [
-        'Retribución Cargo 1.1.1.', 'Antigüedad 1.1.3.', 'Retribuciones Extraordinarias 1.3.1.',
-        'Contribuciones Patronales 1.3.3.', 'S.A.C. 1.3.2.', 'S.A.C. 1.1.4.',
-        'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.'
-    ]
-    
-    sipaf_cols_present = [col for col in concept_columns_sipaf if col in df_filtered.columns]
-
-    if sipaf_cols_present:
-        df_melted_sipaf = df_filtered.melt(
-            id_vars=['Mes', 'Mes_Num'], value_vars=sipaf_cols_present, var_name='Concepto', value_name='Monto'
-        )
-        pivot_table_sipaf = pd.pivot_table(
-            df_melted_sipaf, values='Monto', index='Concepto', columns='Mes', aggfunc='sum', fill_value=0
-        )
-        
-        meses_en_datos_sipaf = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
-        for mes in meses_en_datos_sipaf:
-            if mes not in pivot_table_sipaf.columns:
-                pivot_table_sipaf[mes] = 0
-        if all(mes in pivot_table_sipaf.columns for mes in meses_en_datos_sipaf):
-            pivot_table_sipaf = pivot_table_sipaf[meses_en_datos_sipaf]
-
-        pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
-        pivot_table_sipaf = pivot_table_sipaf.reindex(sipaf_cols_present).dropna(how='all')
-        
-        if not pivot_table_sipaf.empty:
-            total_row = pivot_table_sipaf.sum().rename('Total general')
-            pivot_table_sipaf = pd.concat([pivot_table_sipaf, total_row.to_frame().T])
-
-        st.dataframe(
-            pivot_table_sipaf.style.format("${:,.2f}", na_rep="").set_properties(**{'text-align': 'right'}), 
-            use_container_width=True
-        )
-    else:
-        st.info("No hay datos de conceptos SIPAF para mostrar con los filtros seleccionados.")
-    # --- FIN: NUEVA TABLA DINÁMICA FILTRADA (SIPAF) ---
-    # --- INICIO: NUEVA TABLA DINÁMICA FILTRADA (SIPAF) ---
-    st.markdown("---")
-    st.subheader("Resumen por Concepto (SIPAF)")
     
     # Normalizar nombres de columnas para evitar problemas de puntos o espacios
     df_filtered.columns = df_filtered.columns.str.strip().str.replace(r"\s+", " ", regex=True)
@@ -525,5 +484,6 @@ else:
             fill='transparent'
         )
         st.altair_chart(summary_chart, use_container_width=True)
+
 
 
