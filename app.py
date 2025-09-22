@@ -343,31 +343,29 @@ else:
     
     # --- LÓGICA REESCRITA DESDE CERO PARA GARANTIZAR ESTABILIDAD ---
     if not df_filtered.empty:
-        # 1. Lista de conceptos requeridos.
-        
-        # 2. Crear una copia de trabajo y asegurarse de que todas las columnas existan, rellenando con 0 si faltan.
+        # 1. Crear una copia de trabajo y asegurarse de que todas las columnas existan, rellenando con 0 si faltan.
         temp_df = df_filtered.copy()
         for col in concept_columns_sipaf:
             if col not in temp_df.columns:
                 temp_df[col] = 0
 
-        # 3. Agrupar directamente por mes y sumar los conceptos. Rellenar los NaNs con 0.
+        # 2. Agrupar directamente por mes y sumar los conceptos. Rellenar los NaNs con 0.
         #    Este es el método más directo y robusto.
         sipaf_pivot = temp_df.groupby(['Mes', 'Mes_Num'])[concept_columns_sipaf].sum().fillna(0)
         
-        # 4. Ordenar los meses correctamente y transponer la tabla para el formato deseado.
+        # 3. Ordenar los meses correctamente y transponer la tabla para el formato deseado.
         sipaf_pivot = sipaf_pivot.reset_index().sort_values('Mes_Num').set_index('Mes')[concept_columns_sipaf].T
 
-        # 5. Asegurar que todos los meses seleccionados estén presentes como columnas.
+        # 4. Asegurar que todos los meses seleccionados estén presentes como columnas.
         meses_en_datos = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
         sipaf_pivot = sipaf_pivot.reindex(columns=meses_en_datos, fill_value=0)
 
-        # 6. Calcular el total por concepto y el total general.
+        # 5. Calcular el total por concepto y el total general.
         sipaf_pivot['Total general'] = sipaf_pivot.sum(axis=1)
         total_row = sipaf_pivot.sum().rename('Total general')
         sipaf_pivot = pd.concat([sipaf_pivot, total_row.to_frame().T])
 
-        # 7. Mostrar la tabla final con el formato correcto.
+        # 6. Mostrar la tabla final con el formato correcto.
         st.dataframe(
             sipaf_pivot.style.format("${:,.2f}", na_rep="$0.00").set_properties(**{'text-align': 'right'}),
             use_container_width=True
