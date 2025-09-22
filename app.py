@@ -322,10 +322,6 @@ else:
 
         pivot_table['Total general'] = pivot_table.sum(axis=1)
         pivot_table = pivot_table.reindex(concept_cols_present).dropna(how='all')
-        
-        if not pivot_table.empty:
-            total_row = pivot_table.sum().rename('Total general')
-            pivot_table = pd.concat([pivot_table, total_row.to_frame().T])
 
         st.dataframe(
             pivot_table.style.format("${:,.2f}", na_rep="").set_properties(**{'text-align': 'right'}), 
@@ -363,7 +359,7 @@ else:
             pivot_table_sipaf = pivot_table_sipaf[meses_en_datos_sipaf]
 
         pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
-        pivot_table_sipaf = pivot_table_sipaf.reindex(sipaf_cols_present).dropna(how='all')
+        pivot_table_sipaf = pivot_table_sipaf.reindex(concept_columns_sipaf).fillna(0)
         
         if not pivot_table_sipaf.empty:
             total_row = pivot_table_sipaf.sum().rename('Total general')
