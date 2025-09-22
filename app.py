@@ -341,29 +341,37 @@ else:
         'Contribuciones Patronales 1.1.6.', 'Complementos 1.1.7.', 'Asignaciones Familiares 1.4.'
     ]
     
+    # Create a copy to work with
     temp_df_sipaf = df_filtered.copy()
+
+    # CRITICAL FIX: Ensure all concept columns exist and fill any NaN values with 0
+    # This prevents data loss for concepts that have no values in some filtered rows.
     for col in concept_columns_sipaf:
         if col not in temp_df_sipaf.columns:
             temp_df_sipaf[col] = 0
-
+        else:
+            # This is the key part of the fix
+            temp_df_sipaf[col] = temp_df_sipaf[col].fillna(0)
+    
+    # Now, with clean data, proceed with melting and pivoting
     df_melted_sipaf = temp_df_sipaf.melt(
         id_vars=['Mes', 'Mes_Num'], value_vars=concept_columns_sipaf, var_name='Concepto', value_name='Monto'
     )
     
     if not df_melted_sipaf.empty:
         pivot_table_sipaf = pd.pivot_table(
-            df_melted_sipaf, values='Monto', index='Concepto', columns='Mes', aggfunc='sum', fill_value=0
+            df_melted_sipaf, values='Monto', index='Concepto', columns='Mes', aggfunc='sum'
         )
         
+        # Ensure all selected months and concepts are present in the final table
         meses_en_datos_sipaf = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
         pivot_table_sipaf = pivot_table_sipaf.reindex(columns=meses_en_datos_sipaf, fill_value=0)
-        pivot_table_sipaf = pivot_table_sipaf.reindex(index=concept_columns_sipaf).fillna(0)
+        pivot_table_sipaf = pivot_table_sipaf.reindex(index=concept_columns_sipaf, fill_value=0)
 
+        # Calculate totals
         pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
-        
-        if not pivot_table_sipaf.empty:
-            total_row = pivot_table_sipaf.sum().rename('Total general')
-            pivot_table_sipaf = pd.concat([pivot_table_sipaf, total_row.to_frame().T])
+        total_row = pivot_table_sipaf.sum().rename('Total general')
+        pivot_table_sipaf = pd.concat([pivot_table_sipaf, total_row.to_frame().T])
 
         st.dataframe(
             pivot_table_sipaf.style.format("${:,.2f}", na_rep="").set_properties(**{'text-align': 'right'}), 
