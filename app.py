@@ -234,6 +234,7 @@ else:
         st.dataframe(masa_mensual_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1)
     
     st.write("")
+    st.write("")
     col_dl_1, col_dl_2 = st.columns(2)
     with col_dl_1:
         st.download_button(label="📥 Descargar CSV", data=masa_mensual_display.to_csv(index=False).encode('utf-8'), file_name='evolucion_mensual.csv', mime='text/csv', use_container_width=True)
@@ -269,6 +270,7 @@ else:
             gerencia_data_display = pd.concat([gerencia_data_display, total_row], ignore_index=True)
         st.dataframe(gerencia_data_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height2)
     
+    st.write("")
     st.write("")
     col_dl_3, col_dl_4 = st.columns(2)
     with col_dl_3:
@@ -380,6 +382,7 @@ else:
             )
         
         st.write("")
+        st.write("")
         col_dl_7, col_dl_8 = st.columns(2)
         with col_dl_7:
             st.download_button(label="📥 Descargar CSV", data=pivot_table.to_csv(index=True).encode('utf-8'), file_name='masa_por_concepto.csv', mime='text/csv', use_container_width=True)
@@ -448,6 +451,7 @@ else:
                 height=table_height_sipaf
             )
         
+        st.write("")
         st.write("")
         col_dl_9, col_dl_10 = st.columns(2)
         with col_dl_9:
@@ -569,6 +573,7 @@ else:
             )
             st.altair_chart(summary_chart, use_container_width=True)
             
+        st.write("")
         st.write("")
         col_dl_11, col_dl_12 = st.columns(2)
         with col_dl_11:
