@@ -225,8 +225,8 @@ else:
             masa_mensual_display = pd.concat([masa_mensual_display, total_row], ignore_index=True)
         st.dataframe(masa_mensual_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1)
         
-        # --- UBICACIÓN CORREGIDA DE BOTONES ---
-        st.write("") # Pequeño espacio
+        # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
+        st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
         col_dl_1, col_dl_2 = st.columns(2)
         with col_dl_1:
             st.download_button(label="📥 Descargar CSV", data=masa_mensual_display.to_csv(index=False).encode('utf-8'), file_name='evolucion_mensual.csv', mime='text/csv', use_container_width=True)
@@ -264,8 +264,8 @@ else:
             gerencia_data_display = pd.concat([gerencia_data_display, total_row], ignore_index=True)
         st.dataframe(gerencia_data_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=(len(gerencia_data) + 1) * 35 + 3)
         
-        # --- UBICACIÓN CORREGIDA DE BOTONES ---
-        st.write("") # Pequeño espacio
+        # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
+        st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
         col_dl_3, col_dl_4 = st.columns(2)
         with col_dl_3:
             st.download_button(label="📥 Descargar CSV", data=gerencia_data_display.to_csv(index=False).encode('utf-8'), file_name='masa_por_gerencia.csv', mime='text/csv', use_container_width=True)
@@ -299,8 +299,8 @@ else:
         table_height = (len(table_display_data) + 1) * 35 + 3
         st.dataframe(table_display_data.copy().style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
 
-        # --- UBICACIÓN CORREGIDA DE BOTONES ---
-        st.write("") # Pequeño espacio
+        # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
+        st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
         col_dl_5, col_dl_6 = st.columns(2)
         with col_dl_5:
             st.download_button(label="📥 Descargar CSV", data=table_display_data.to_csv(index=False).encode('utf-8'), file_name='distribucion_clasificacion.csv', mime='text/csv', use_container_width=True)
@@ -336,8 +336,8 @@ else:
         with col_table_concepto:
             st.dataframe(pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), use_container_width=True, height=chart_height_concepto + 35)
             
-            # --- UBICACIÓN CORREGIDA DE BOTONES ---
-            st.write("") # Pequeño espacio
+            # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
+            st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
             col_dl_7, col_dl_8 = st.columns(2)
             with col_dl_7:
                 st.download_button(label="📥 Descargar CSV", data=pivot_table.to_csv(index=True).encode('utf-8'), file_name='masa_por_concepto.csv', mime='text/csv', use_container_width=True)
@@ -379,8 +379,8 @@ else:
             table_height_sipaf = chart_height_sipaf + 35 
             st.dataframe(pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), use_container_width=True, height=table_height_sipaf)
             
-            # --- UBICACIÓN CORREGIDA DE BOTONES ---
-            st.write("") # Pequeño espacio
+            # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
+            st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
             col_dl_9, col_dl_10 = st.columns(2)
             with col_dl_9:
                 st.download_button(label="📥 Descargar CSV", data=pivot_table_sipaf.to_csv(index=True).encode('utf-8'), file_name='resumen_sipaf.csv', mime='text/csv', use_container_width=True)
@@ -473,8 +473,8 @@ else:
             table_height_anual = 350 + 40
             st.dataframe(summary_df_display.style.format(summary_format_mapper, na_rep="").set_properties(subset=summary_currency_cols, **{'text-align': 'right'}), use_container_width=True, hide_index=True, height=table_height_anual)
             
-            # --- UBICACIÓN CORREGIDA DE BOTONES ---
-            st.write("") # Pequeño espacio
+            # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
+            st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
             col_dl_11, col_dl_12 = st.columns(2)
             with col_dl_11:
                 st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
