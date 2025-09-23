@@ -190,6 +190,7 @@ else:
     col_chart1, col_table1 = st.columns([2, 1])
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     
+    chart_height1 = (len(masa_mensual) + 1) * 35 + 3
     with col_chart1:
         y_domain = [0, 1] 
         if not masa_mensual.empty:
@@ -200,7 +201,6 @@ else:
             if y_domain[0] < 0 and min_val >= 0: y_domain[0] = 0
         y_scale = alt.Scale(domain=y_domain)
 
-        chart_height1 = (len(masa_mensual) + 1) * 35 + 3
         base_chart1 = alt.Chart(masa_mensual).transform_window(
             total_sum='sum(Total Mensual)'
         ).transform_calculate(
@@ -223,10 +223,9 @@ else:
         if not masa_mensual_display.empty:
             total_row = pd.DataFrame([{'Mes': 'Total', 'Total Mensual': masa_mensual_display['Total Mensual'].sum()}])
             masa_mensual_display = pd.concat([masa_mensual_display, total_row], ignore_index=True)
-        st.dataframe(masa_mensual_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1)
+        # --- AJUSTE DE ALTURA DE TABLA ---
+        st.dataframe(masa_mensual_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1 - 40)
         
-        # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
-        st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
         col_dl_1, col_dl_2 = st.columns(2)
         with col_dl_1:
             st.download_button(label="📥 Descargar CSV", data=masa_mensual_display.to_csv(index=False).encode('utf-8'), file_name='evolucion_mensual.csv', mime='text/csv', use_container_width=True)
@@ -238,8 +237,8 @@ else:
     col_chart2, col_table2 = st.columns([3, 2])
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
     
+    chart_height2 = (len(gerencia_data) + 1) * 35 + 3
     with col_chart2:
-        chart_height2 = (len(gerencia_data) + 1) * 35 + 3
         base_chart2 = alt.Chart(gerencia_data).transform_window(
             total_sum='sum(Total Mensual)'
         ).transform_calculate(
@@ -262,10 +261,9 @@ else:
         if not gerencia_data_display.empty:
             total_row = pd.DataFrame([{'Gerencia': 'Total', 'Total Mensual': gerencia_data_display['Total Mensual'].sum()}])
             gerencia_data_display = pd.concat([gerencia_data_display, total_row], ignore_index=True)
-        st.dataframe(gerencia_data_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=(len(gerencia_data) + 1) * 35 + 3)
+        # --- AJUSTE DE ALTURA DE TABLA ---
+        st.dataframe(gerencia_data_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height2 - 40)
         
-        # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
-        st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
         col_dl_3, col_dl_4 = st.columns(2)
         with col_dl_3:
             st.download_button(label="📥 Descargar CSV", data=gerencia_data_display.to_csv(index=False).encode('utf-8'), file_name='masa_por_gerencia.csv', mime='text/csv', use_container_width=True)
@@ -277,6 +275,7 @@ else:
     col_chart3, col_table3 = st.columns([2, 1])
     clasificacion_data = df_filtered.groupby('Clasificacion_Ministerio')['Total Mensual'].sum().reset_index()
     
+    chart_height3 = 400 # Altura fija para el gráfico de torta
     with col_chart3:
         total = clasificacion_data['Total Mensual'].sum()
         clasificacion_data['Porcentaje'] = (clasificacion_data['Total Mensual'] / total) if total > 0 else 0
@@ -287,7 +286,7 @@ else:
         )
         pie = base_chart.mark_arc(innerRadius=70, outerRadius=110)
         text = base_chart.mark_text(radius=140, size=12, fill='black').encode(text=alt.condition(alt.datum.Porcentaje > 0.03, alt.Text('Porcentaje:Q', format='.1%'), alt.value('')))
-        final_chart = (pie + text).properties(height=400).configure_view(stroke=None).configure(background='transparent')
+        final_chart = (pie + text).properties(height=chart_height3).configure_view(stroke=None).configure(background='transparent')
         st.altair_chart(final_chart, use_container_width=True)
 
     with col_table3:
@@ -296,11 +295,9 @@ else:
         if not table_display_data.empty:
             total_row = pd.DataFrame([{'Clasificación': 'Total', 'Total Mensual': table_display_data['Total Mensual'].sum()}])
             table_display_data = pd.concat([table_display_data, total_row], ignore_index=True)
-        table_height = (len(table_display_data) + 1) * 35 + 3
-        st.dataframe(table_display_data.copy().style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
+        # --- AJUSTE DE ALTURA DE TABLA ---
+        st.dataframe(table_display_data.copy().style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height3 - 40)
 
-        # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
-        st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
         col_dl_5, col_dl_6 = st.columns(2)
         with col_dl_5:
             st.download_button(label="📥 Descargar CSV", data=table_display_data.to_csv(index=False).encode('utf-8'), file_name='distribucion_clasificacion.csv', mime='text/csv', use_container_width=True)
@@ -322,10 +319,10 @@ else:
         pivot_table = pivot_table.reindex(concept_cols_present).dropna(how='all')
         
         col_chart_concepto, col_table_concepto = st.columns([2, 1])
+        chart_data_concepto = pivot_table.reset_index()
+        chart_data_concepto = chart_data_concepto[chart_data_concepto['Concepto'] != 'Total Mensual'].sort_values('Total general', ascending=False)
+        chart_height_concepto = (len(chart_data_concepto) + 1) * 35 + 3
         with col_chart_concepto:
-            chart_data_concepto = pivot_table.reset_index()
-            chart_data_concepto = chart_data_concepto[chart_data_concepto['Concepto'] != 'Total Mensual'].sort_values('Total general', ascending=False)
-            chart_height_concepto = (len(chart_data_concepto) + 1) * 35 + 3
             bar_chart_concepto = alt.Chart(chart_data_concepto).mark_bar().encode(
                 x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
@@ -334,10 +331,9 @@ else:
             st.altair_chart(bar_chart_concepto, use_container_width=True)
 
         with col_table_concepto:
-            st.dataframe(pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), use_container_width=True, height=chart_height_concepto + 35)
+            # --- AJUSTE DE ALTURA DE TABLA ---
+            st.dataframe(pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), use_container_width=True, height=chart_height_concepto - 5)
             
-            # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
-            st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
             col_dl_7, col_dl_8 = st.columns(2)
             with col_dl_7:
                 st.download_button(label="📥 Descargar CSV", data=pivot_table.to_csv(index=True).encode('utf-8'), file_name='masa_por_concepto.csv', mime='text/csv', use_container_width=True)
@@ -365,9 +361,9 @@ else:
         
         col_chart_sipaf, col_table_sipaf = st.columns([2, 1])
         
+        chart_data_sipaf = pivot_table_sipaf.drop('Total general').reset_index().rename(columns={'index': 'Concepto'}).sort_values('Total general', ascending=False)
+        chart_height_sipaf = (len(chart_data_sipaf) + 1) * 35 + 3
         with col_chart_sipaf:
-            chart_data_sipaf = pivot_table_sipaf.drop('Total general').reset_index().rename(columns={'index': 'Concepto'}).sort_values('Total general', ascending=False)
-            chart_height_sipaf = (len(chart_data_sipaf) + 1) * 35 + 3
             bar_chart_sipaf = alt.Chart(chart_data_sipaf).mark_bar().encode(
                 x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
@@ -376,11 +372,9 @@ else:
             st.altair_chart(bar_chart_sipaf, use_container_width=True)
 
         with col_table_sipaf:
-            table_height_sipaf = chart_height_sipaf + 35 
-            st.dataframe(pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), use_container_width=True, height=table_height_sipaf)
+            # --- AJUSTE DE ALTURA DE TABLA ---
+            st.dataframe(pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), use_container_width=True, height=chart_height_sipaf - 5)
             
-            # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
-            st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
             col_dl_9, col_dl_10 = st.columns(2)
             with col_dl_9:
                 st.download_button(label="📥 Descargar CSV", data=pivot_table_sipaf.to_csv(index=True).encode('utf-8'), file_name='resumen_sipaf.csv', mime='text/csv', use_container_width=True)
@@ -444,6 +438,7 @@ else:
     if not summary_df_display.empty:
         col_chart_anual, col_table_anual = st.columns([2, 1])
 
+        chart_height_anual = 350
         with col_chart_anual:
             summary_chart_data = summary_df_filtered.reset_index().melt(id_vars='Mes', var_name='Clasificacion', value_name='Masa Salarial')
             mes_sort_order = summary_chart_data['Mes'].dropna().unique().tolist()
@@ -458,7 +453,7 @@ else:
                 y=alt.Y('total_masa_salarial:Q'),
                 text=alt.Text('total_masa_salarial:Q', format='$,.2s')
             )
-            summary_chart = (bar_chart + text_labels).properties(height=350, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+            summary_chart = (bar_chart + text_labels).properties(height=chart_height_anual, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
             st.altair_chart(summary_chart, use_container_width=True)
             
         with col_table_anual:
@@ -470,16 +465,11 @@ else:
             summary_df_display.iloc[-1, summary_df_display.columns.get_loc('Mes')] = 'Total'
             summary_currency_cols = [col for col in summary_df_display.columns if col != 'Mes' and pd.api.types.is_numeric_dtype(summary_df_display[col])]
             summary_format_mapper = {col: lambda x: f"${format_number_es(x)}" for col in summary_currency_cols}
-            table_height_anual = 350 + 40
-            st.dataframe(summary_df_display.style.format(summary_format_mapper, na_rep="").set_properties(subset=summary_currency_cols, **{'text-align': 'right'}), use_container_width=True, hide_index=True, height=table_height_anual)
+            # --- AJUSTE DE ALTURA DE TABLA ---
+            st.dataframe(summary_df_display.style.format(summary_format_mapper, na_rep="").set_properties(subset=summary_currency_cols, **{'text-align': 'right'}), use_container_width=True, hide_index=True, height=chart_height_anual)
             
-            # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
-            st.markdown('<div style="margin-top:60px;"></div>', unsafe_allow_html=True)
             col_dl_11, col_dl_12 = st.columns(2)
             with col_dl_11:
                 st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
             with col_dl_12:
                 st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
-
-
-
