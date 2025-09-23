@@ -474,9 +474,10 @@ else:
             st.dataframe(summary_df_display.style.format(summary_format_mapper, na_rep="").set_properties(subset=summary_currency_cols, **{'text-align': 'right'}), use_container_width=True, hide_index=True, height=table_height_anual)
             
             # --- UBICACIÓN CORREGIDA DE BOTONES CON ESPACIADOR ---
-            st.markdown('<div style="margin-top:25px;"></div>', unsafe_allow_html=True)
+            st.markdown('<div style="margin-top:30px;"></div>', unsafe_allow_html=True)
             col_dl_11, col_dl_12 = st.columns(2)
             with col_dl_11:
                 st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
             with col_dl_12:
                 st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+
