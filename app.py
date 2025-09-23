@@ -233,12 +233,14 @@ else:
             masa_mensual_display = pd.concat([masa_mensual_display, total_row], ignore_index=True)
         st.dataframe(masa_mensual_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height1)
     
-    st.write("")
-    col_dl_1, col_dl_2 = st.columns(2)
-    with col_dl_1:
-        st.download_button(label="📥 Descargar CSV", data=masa_mensual_display.to_csv(index=False).encode('utf-8'), file_name='evolucion_mensual.csv', mime='text/csv', use_container_width=True)
-    with col_dl_2:
-        st.download_button(label="📥 Descargar Excel", data=to_excel(masa_mensual_display), file_name='evolucion_mensual.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+    # --- INICIO CORRECCIÓN BOTONES ---
+    with st.container():
+        col_dl_1, col_dl_2 = st.columns(2)
+        with col_dl_1:
+            st.download_button(label="📥 Descargar CSV", data=masa_mensual_display.to_csv(index=False).encode('utf-8'), file_name='evolucion_mensual.csv', mime='text/csv', use_container_width=True)
+        with col_dl_2:
+            st.download_button(label="📥 Descargar Excel", data=to_excel(masa_mensual_display), file_name='evolucion_mensual.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+    # --- FIN CORRECCIÓN BOTONES ---
 
     st.markdown("---")
     st.subheader("Masa Salarial por Gerencia")
@@ -269,12 +271,14 @@ else:
             gerencia_data_display = pd.concat([gerencia_data_display, total_row], ignore_index=True)
         st.dataframe(gerencia_data_display.style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=chart_height2)
     
-    st.write("")
-    col_dl_3, col_dl_4 = st.columns(2)
-    with col_dl_3:
-        st.download_button(label="📥 Descargar CSV", data=gerencia_data_display.to_csv(index=False).encode('utf-8'), file_name='masa_por_gerencia.csv', mime='text/csv', use_container_width=True)
-    with col_dl_4:
-        st.download_button(label="📥 Descargar Excel", data=to_excel(gerencia_data_display), file_name='masa_por_gerencia.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+    # --- INICIO CORRECCIÓN BOTONES ---
+    with st.container():
+        col_dl_3, col_dl_4 = st.columns(2)
+        with col_dl_3:
+            st.download_button(label="📥 Descargar CSV", data=gerencia_data_display.to_csv(index=False).encode('utf-8'), file_name='masa_por_gerencia.csv', mime='text/csv', use_container_width=True)
+        with col_dl_4:
+            st.download_button(label="📥 Descargar Excel", data=to_excel(gerencia_data_display), file_name='masa_por_gerencia.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+    # --- FIN CORRECCIÓN BOTONES ---
     
     st.markdown("---")
     st.subheader("Distribución por Clasificación")
@@ -319,12 +323,14 @@ else:
         table_height = (len(table_display_data) + 1) * 35 + 3
         st.dataframe(table_display_data.copy().style.format({"Total Mensual": lambda x: f"${format_number_es(x)}"}).set_properties(subset=["Total Mensual"], **{'text-align': 'right'}), hide_index=True, use_container_width=True, height=table_height)
     
-    st.write("")
-    col_dl_5, col_dl_6 = st.columns(2)
-    with col_dl_5:
-        st.download_button(label="📥 Descargar CSV", data=table_display_data.to_csv(index=False).encode('utf-8'), file_name='distribucion_clasificacion.csv', mime='text/csv', use_container_width=True)
-    with col_dl_6:
-        st.download_button(label="📥 Descargar Excel", data=to_excel(table_display_data), file_name='distribucion_clasificacion.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+    # --- INICIO CORRECCIÓN BOTONES ---
+    with st.container():
+        col_dl_5, col_dl_6 = st.columns(2)
+        with col_dl_5:
+            st.download_button(label="📥 Descargar CSV", data=table_display_data.to_csv(index=False).encode('utf-8'), file_name='distribucion_clasificacion.csv', mime='text/csv', use_container_width=True)
+        with col_dl_6:
+            st.download_button(label="📥 Descargar Excel", data=to_excel(table_display_data), file_name='distribucion_clasificacion.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+    # --- FIN CORRECCIÓN BOTONES ---
 
     st.markdown("---")
     st.subheader("Masa Salarial por Concepto")
@@ -379,12 +385,14 @@ else:
                 height=chart_height_concepto + 35
             )
         
-        st.write("")
-        col_dl_7, col_dl_8 = st.columns(2)
-        with col_dl_7:
-            st.download_button(label="📥 Descargar CSV", data=pivot_table.to_csv(index=True).encode('utf-8'), file_name='masa_por_concepto.csv', mime='text/csv', use_container_width=True)
-        with col_dl_8:
-            st.download_button(label="📥 Descargar Excel", data=to_excel(pivot_table.reset_index()), file_name='masa_por_concepto.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+        # --- INICIO CORRECCIÓN BOTONES ---
+        with st.container():
+            col_dl_7, col_dl_8 = st.columns(2)
+            with col_dl_7:
+                st.download_button(label="📥 Descargar CSV", data=pivot_table.to_csv(index=True).encode('utf-8'), file_name='masa_por_concepto.csv', mime='text/csv', use_container_width=True)
+            with col_dl_8:
+                st.download_button(label="📥 Descargar Excel", data=to_excel(pivot_table.reset_index()), file_name='masa_por_concepto.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+        # --- FIN CORRECCIÓN BOTONES ---
     else:
         st.info("No hay datos de conceptos para mostrar con los filtros seleccionados.")
 
@@ -448,12 +456,14 @@ else:
                 height=table_height_sipaf
             )
         
-        st.write("")
-        col_dl_9, col_dl_10 = st.columns(2)
-        with col_dl_9:
-            st.download_button(label="📥 Descargar CSV", data=pivot_table_sipaf.to_csv(index=True).encode('utf-8'), file_name='resumen_sipaf.csv', mime='text/csv', use_container_width=True)
-        with col_dl_10:
-            st.download_button(label="📥 Descargar Excel", data=to_excel(pivot_table_sipaf.reset_index()), file_name='resumen_sipaf.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+        # --- INICIO CORRECCIÓN BOTONES ---
+        with st.container():
+            col_dl_9, col_dl_10 = st.columns(2)
+            with col_dl_9:
+                st.download_button(label="📥 Descargar CSV", data=pivot_table_sipaf.to_csv(index=True).encode('utf-8'), file_name='resumen_sipaf.csv', mime='text/csv', use_container_width=True)
+            with col_dl_10:
+                st.download_button(label="📥 Descargar Excel", data=to_excel(pivot_table_sipaf.reset_index()), file_name='resumen_sipaf.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+        # --- FIN CORRECCIÓN BOTONES ---
     else:
         st.info("No hay datos de conceptos SIPAF para mostrar con los filtros seleccionados.")
 
@@ -569,10 +579,11 @@ else:
             )
             st.altair_chart(summary_chart, use_container_width=True)
             
-        st.write("")
-        col_dl_11, col_dl_12 = st.columns(2)
-        with col_dl_11:
-            st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
-        with col_dl_12:
-            st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
-
+        # --- INICIO CORRECCIÓN BOTONES ---
+        with st.container():
+            col_dl_11, col_dl_12 = st.columns(2)
+            with col_dl_11:
+                st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
+            with col_dl_12:
+                st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+        # --- FIN CORRECCIÓN BOTONES ---
