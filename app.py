@@ -49,6 +49,22 @@ h1, h2, h3 {
     margin-top: 50px;
 }
 /* --- FIN CORRECCIÓN CSS --- */
+
+/* --- INICIO ESTILO DE BOTONES --- */
+[data-testid="stDownloadButton"] > button {
+    background-color: #0062ff;
+    color: white;
+    border-radius: 5px;
+    border: none;
+    padding: 10px 24px;
+}
+
+[data-testid="stDownloadButton"] > button:hover {
+    background-color: #004ecb; /* Un azul un poco más oscuro */
+    color: white;
+    border: none;
+}
+/* --- FIN ESTILO DE BOTONES --- */
 </style>
 """, unsafe_allow_html=True)
 
@@ -482,3 +498,4 @@ else:
         with col_dl_12:
             st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
+
