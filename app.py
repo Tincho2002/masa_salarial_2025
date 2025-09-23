@@ -242,16 +242,6 @@ else:
 
     st.markdown("---")
     st.subheader("Masa Salarial por Gerencia")
-    
-    # --- INICIO CORRECCIÓN ANIMACIÓN ---
-    # Para una animación fluida, fijamos el orden y el dominio máximo del eje X.
-    # 1. Calcular el orden de las gerencias basado en el dataframe SIN FILTRAR.
-    all_gerencia_data = df.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False)
-    gerencia_sort_order = all_gerencia_data.index.tolist()
-    # 2. Calcular el valor máximo para el eje X para que no cambie con los filtros.
-    max_gerencia_total = all_gerencia_data.max() * 1.1 # Añadimos un 10% de padding
-    # --- FIN CORRECCIÓN ANIMACIÓN ---
-
     col_chart2, col_table2 = st.columns([3, 2])
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
     chart_height2 = (len(gerencia_data) + 1) * 35 + 3
@@ -263,15 +253,12 @@ else:
             label_text="format(datum['Total Mensual'] / 1000000000, ',.2f') + 'G (' + format(datum.percentage, '.1%') + ')'"
         )
         bar = base_chart2.mark_bar().encode(
-            x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'), 
-                    scale=alt.Scale(domain=[0, max_gerencia_total])),
-            y=alt.Y('Gerencia:N', sort=gerencia_sort_order, title=None, axis=alt.Axis(labelLimit=120)),
+            x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+            y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelLimit=120)),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         )
         text = base_chart2.mark_text(align='left', baseline='middle', dx=5).encode(
-            x='Total Mensual:Q', 
-            y=alt.Y('Gerencia:N', sort=gerencia_sort_order), 
-            text='label_text:N', color=alt.value('black')
+            x='Total Mensual:Q', y=alt.Y('Gerencia:N', sort='-x'), text='label_text:N', color=alt.value('black')
         )
         bar_chart = (bar + text).properties(height=chart_height2, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(bar_chart, use_container_width=True)
@@ -352,15 +339,6 @@ else:
     concept_cols_present = [col for col in concept_columns_to_pivot if col in df_filtered.columns]
 
     if concept_cols_present:
-        # --- INICIO CORRECCIÓN ANIMACIÓN ---
-        # 1. Calcular orden y máximo desde el dataframe original para estabilizar los ejes.
-        df_melted_unfiltered = df.melt(id_vars=['Mes', 'Mes_Num'], value_vars=concept_cols_present, var_name='Concepto', value_name='Monto')
-        all_concept_data = df_melted_unfiltered.groupby('Concepto')['Monto'].sum().sort_values(ascending=False)
-        all_concept_data = all_concept_data[all_concept_data.index != 'Total Mensual']
-        concept_sort_order = all_concept_data.index.tolist()
-        max_concept_total = all_concept_data.max() * 1.1 # Padding
-        # --- FIN CORRECCIÓN ANIMACIÓN ---
-
         df_melted = df_filtered.melt(id_vars=['Mes', 'Mes_Num'], value_vars=concept_cols_present, var_name='Concepto', value_name='Monto')
         pivot_table = pd.pivot_table(df_melted, values='Monto', index='Concepto', columns='Mes', aggfunc='sum', fill_value=0)
         
@@ -381,9 +359,8 @@ else:
             chart_height_concepto = (len(chart_data_concepto) + 1) * 35 + 3
             
             bar_chart_concepto = alt.Chart(chart_data_concepto).mark_bar().encode(
-                x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'),
-                        scale=alt.Scale(domain=[0, max_concept_total])),
-                y=alt.Y('Concepto:N', sort=concept_sort_order, title=None, axis=alt.Axis(labelLimit=200)),
+                x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+                y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
                 tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
             ).properties(
                 height=chart_height_concepto,
@@ -426,14 +403,6 @@ else:
                 sipaf_cols_present.append(col)
     
     if sipaf_cols_present:
-        # --- INICIO CORRECCIÓN ANIMACIÓN ---
-        # 1. Calcular orden y máximo desde el dataframe original para estabilizar los ejes.
-        df_melted_sipaf_unfiltered = df.melt(id_vars=['Mes', 'Mes_Num'], value_vars=sipaf_cols_present, var_name='Concepto', value_name='Monto')
-        all_sipaf_data = df_melted_sipaf_unfiltered.groupby('Concepto')['Monto'].sum().sort_values(ascending=False)
-        sipaf_sort_order = all_sipaf_data.index.tolist()
-        max_sipaf_total = all_sipaf_data.max() * 1.1 # Padding
-        # --- FIN CORRECCIÓN ANIMACIÓN ---
-
         df_melted_sipaf = df_filtered.melt(id_vars=['Mes', 'Mes_Num'], value_vars=sipaf_cols_present, var_name='Concepto', value_name='Monto')
         pivot_table_sipaf = pd.pivot_table(df_melted_sipaf, values='Monto', index='Concepto', columns='Mes', aggfunc='sum', fill_value=0)
         meses_en_datos_sipaf = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
@@ -458,9 +427,8 @@ else:
             chart_height_sipaf = (len(chart_data_sipaf) + 1) * 35 + 3
 
             bar_chart_sipaf = alt.Chart(chart_data_sipaf).mark_bar().encode(
-                x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'),
-                        scale=alt.Scale(domain=[0, max_sipaf_total])),
-                y=alt.Y('Concepto:N', sort=sipaf_sort_order, title=None, axis=alt.Axis(labelLimit=200)),
+                x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
+                y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
                 tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
             ).properties(
                 height=chart_height_sipaf,
@@ -538,16 +506,6 @@ else:
     st.markdown("---")
     st.subheader("Resumen de Evolución Anual (Datos Filtrados)")
     
-    # --- INICIO CORRECCIÓN ANIMACIÓN ---
-    # Calcular el máximo para el eje Y del gráfico de resumen anual para estabilizarlo
-    if not df.empty:
-        # Agrupamos por mes y sumamos el total mensual del dataframe SIN FILTRAR
-        monthly_totals_unfiltered = df.groupby('Mes_Num')['Total Mensual'].sum()
-        max_monthly_total = monthly_totals_unfiltered.max() * 1.1 # 10% padding
-    else:
-        max_monthly_total = 1 # Un valor por defecto si no hay datos
-    # --- FIN CORRECCIÓN ANIMACIÓN ---
-
     summary_df_filtered = pd.pivot_table(
         df_filtered,
         values='Total Mensual',
@@ -583,9 +541,8 @@ else:
             mes_sort_order = summary_chart_data['Mes'].dropna().unique().tolist()
 
             bar_chart = alt.Chart(summary_chart_data).mark_bar().encode(
-                x=alt.X('Mes:N', sort=meses_ordenados, title='Mes'),
-                y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s'),
-                        scale=alt.Scale(domain=[0, max_monthly_total])),
+                x=alt.X('Mes:N', sort=mes_sort_order, title='Mes'),
+                y=alt.Y('sum(Masa Salarial):Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 color=alt.Color('Clasificacion:N', title='Clasificación'),
                 tooltip=[alt.Tooltip('Mes:N'), alt.Tooltip('Clasificacion:N'), alt.Tooltip('sum(Masa Salarial):Q', format='$,.2f', title='Masa Salarial')]
             )
@@ -598,7 +555,7 @@ else:
                 align='center',
                 color='black'
             ).encode(
-                x=alt.X('Mes:N', sort=meses_ordenados),
+                x=alt.X('Mes:N', sort=mes_sort_order),
                 y=alt.Y('total_masa_salarial:Q'),
                 text=alt.Text('total_masa_salarial:Q', format='$,.2s')
             )
@@ -618,3 +575,4 @@ else:
             st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
         with col_dl_12:
             st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+
