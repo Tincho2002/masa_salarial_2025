@@ -3,7 +3,10 @@ streamlit
 pandas
 altair
 fpdf2
+numpy
+plotly
 
 -- Dependencia para leer archivos Excel (.xlsx) --
 openpyxl
+
 
