@@ -48,46 +48,23 @@ h1, h2, h3 {
 """, unsafe_allow_html=True)
 
 
-# --- INICIO CORRECCIÓN: Formato de Números ---
-
-# Define una configuración regional para que los gráficos de Altair usen
-# punto para miles y coma para decimales.
+# --- Formato de Números ---
 custom_format_locale = {
-    "decimal": ",",
-    "thousands": ".",
-    "grouping": [3],
-    "currency": ["$", ""]
+    "decimal": ",", "thousands": ".", "grouping": [3], "currency": ["$", ""]
 }
-# Registra la configuración para que todos los gráficos la usen.
 alt.renderers.set_embed_options(formatLocale=custom_format_locale)
 
-
 def format_number_es(num):
-    """
-    Formatea un número al estilo español (puntos para miles, coma para decimales).
-    """
-    if pd.isna(num) or not isinstance(num, (int, float, np.number)):
-        return ""
-    # Formatea a un string con dos decimales, usando el estándar de Python (coma de miles, punto decimal)
+    if pd.isna(num) or not isinstance(num, (int, float, np.number)): return ""
     s = f"{num:,.2f}"
-    # Intercambia los separadores
     return s.replace(",", "TEMP").replace(".", ",").replace("TEMP", ".")
 
 def format_integer_es(num):
-    """
-    Formatea un número entero al estilo español (puntos para miles).
-    """
-    if pd.isna(num) or not isinstance(num, (int, float, np.number)):
-        return ""
-    # Convierte a entero, formatea con comas, y reemplaza comas por puntos.
+    if pd.isna(num) or not isinstance(num, (int, float, np.number)): return ""
     s = f"{int(num):,}"
     return s.replace(",", ".")
 
-# --- FIN CORRECCIÓN ---
-
-
 # --- FUNCIONES DE EXPORTACIÓN ---
-
 def to_excel(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -100,11 +77,9 @@ def to_pdf(df, periodo):
     html_content = f"""
     <!DOCTYPE html>
     <html>
-    <head>
-    <meta charset="UTF-8">
+    <head><meta charset="UTF-8">
     <style>
-        body {{ font-family: "Arial", sans-serif; }}
-        h2 {{ text-align: center; }}
+        body {{ font-family: "Arial", sans-serif; }} h2 {{ text-align: center; }}
         h3 {{ text-align: center; font-weight: normal; font-size: 12px; }}
         table {{ width: 100%; border-collapse: collapse; }}
         th, td {{ padding: 6px 5px; text-align: left; border: 1px solid #dddddd; font-size: 9px; }}
@@ -112,9 +87,7 @@ def to_pdf(df, periodo):
     </style>
     </head>
     <body>
-        <h2>Reporte Resumido de Datos</h2>
-        <h3>Período: {periodo_str}</h3>
-        {html_table}
+        <h2>Reporte Resumido de Datos</h2><h3>Período: {periodo_str}</h3>{html_table}
     </body>
     </html>
     """
@@ -123,19 +96,23 @@ def to_pdf(df, periodo):
     pdf.write_html(html_content)
     return bytes(pdf.output())
 
-# --- INICIO: NUEVA FUNCIÓN PARA APLICAR FILTROS ---
+# --- LÓGICA DE FILTROS ---
 def apply_filters(df, selections):
     _df = df.copy()
     for col, values in selections.items():
         if values:
             _df = _df[_df[col].isin(values)]
     return _df
-# --- FIN: NUEVA FUNCIÓN ---
 
 # --- CARGA DE DATOS ---
 @st.cache_data
-def load_data(url):
-    df = pd.read_excel(url, sheet_name='masa_salarial', header=0, engine='openpyxl')
+def load_data(uploaded_file):
+    try:
+        df = pd.read_excel(uploaded_file, sheet_name='masa_salarial', header=0, engine='openpyxl')
+    except Exception as e:
+        st.error(f"Error al leer el archivo Excel. Asegúrate de que tenga una hoja llamada 'masa_salarial'. Error: {e}")
+        return pd.DataFrame()
+        
     df.columns = [str(col).strip() for col in df.columns]
     if 'Unnamed: 0' in df.columns:
         df = df.drop(columns=['Unnamed: 0'])
@@ -162,18 +139,25 @@ def load_data(url):
     df.reset_index(drop=True, inplace=True)
     return df
 
-FILE_URL = "https://raw.githubusercontent.com/Tincho2002/masa_salarial_2025/main/masa_salarial_2025.xlsx"
-df = load_data(FILE_URL)
-
-if df.empty:
-    st.error("La carga de datos detallados ha fallado. El dashboard no puede continuar.")
-    st.stop()
-    
 st.title('📊 Dashboard de Masa Salarial 2025')
 st.markdown("Análisis interactivo de los costos de la mano de obra de la compañía.")
+
+# --- INICIO: LÓGICA DE CARGA DE ARCHIVO ---
+uploaded_file = st.file_uploader("📂 Cargue aquí su archivo Excel de Masa Salarial", type=["xlsx"])
+
+if uploaded_file is None:
+    st.info("Por favor, cargue un archivo para comenzar el análisis.")
+    st.stop()
+
+df = load_data(uploaded_file)
+# --- FIN: LÓGICA DE CARGA DE ARCHIVO ---
+
+if df.empty:
+    st.error("El archivo cargado está vacío o no se pudo procesar. El dashboard no puede continuar.")
+    st.stop()
+    
 st.sidebar.header('Filtros del Dashboard')
 
-# --- INICIO: LÓGICA DE FILTROS CON SESSION_STATE ---
 filter_cols = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Mes']
 
 if 'ms_selections' not in st.session_state:
@@ -212,7 +196,6 @@ for col in filter_cols:
     )
 
 df_filtered = apply_filters(df, st.session_state.ms_selections)
-# --- FIN: LÓGICA DE FILTROS CON SESSION_STATE ---
 
 total_masa_salarial = df_filtered['Total Mensual'].sum()
 cantidad_empleados = 0
@@ -226,7 +209,6 @@ if not df_filtered.empty:
 costo_medio = total_masa_salarial / cantidad_empleados if cantidad_empleados > 0 else 0
 col1, col2, col3 = st.columns(3)
 
-# Aplicar formato de número corregido a las métricas
 col1.metric("Masa Salarial Total (Período)", f"${format_number_es(total_masa_salarial)}")
 col2.metric(f"Empleados ({latest_month_name})", f"{format_integer_es(cantidad_empleados)}")
 col3.metric("Costo Medio por Empleado (Período)", f"${format_number_es(costo_medio)}")
@@ -235,6 +217,7 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
+    # (El resto del código del dashboard sigue aquí, sin cambios)
     st.subheader("Evolución Mensual de la Masa Salarial")
     col_chart1, col_table1 = st.columns([2, 1])
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
@@ -403,22 +386,11 @@ else:
                 x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
                 tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
-            ).properties(
-                height=chart_height_concepto,
-                padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}
-            ).configure(
-                background='transparent'
-            ).configure_view(
-                fill='transparent'
-            )
+            ).properties(height=chart_height_concepto, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
             st.altair_chart(bar_chart_concepto, use_container_width=True)
 
         with col_table_concepto:
-            st.dataframe(
-                pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), 
-                use_container_width=True,
-                height=chart_height_concepto + 35
-            )
+            st.dataframe(pivot_table.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), use_container_width=True, height=chart_height_concepto + 35)
         
         st.write("")
         col_dl_7, col_dl_8 = st.columns(2)
@@ -471,23 +443,12 @@ else:
                 x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
                 tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
-            ).properties(
-                height=chart_height_sipaf,
-                padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}
-            ).configure(
-                background='transparent'
-            ).configure_view(
-                fill='transparent'
-            )
+            ).properties(height=chart_height_sipaf, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
             st.altair_chart(bar_chart_sipaf, use_container_width=True)
 
         with col_table_sipaf:
             table_height_sipaf = chart_height_sipaf + 35 
-            st.dataframe(
-                pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}),
-                use_container_width=True,
-                height=table_height_sipaf
-            )
+            st.dataframe(pivot_table_sipaf.style.format(formatter=lambda x: f"${format_number_es(x)}").set_properties(**{'text-align': 'right'}), use_container_width=True, height=table_height_sipaf)
         
         st.write("")
         col_dl_9, col_dl_10 = st.columns(2)
@@ -515,9 +476,7 @@ else:
             df_pdf_formatted = df_pdf_raw.copy()
             df_pdf_formatted['Período'] = df_pdf_formatted['Período'].dt.strftime('%Y-%m')
             df_pdf_formatted['Total Mensual'] = df_pdf_formatted['Total Mensual'].apply(lambda x: f"${format_number_es(x)}")
-            # --- INICIO: CORRECCIÓN EN LA LLAMADA A to_pdf ---
             st.download_button(label="📥 PDF (Resumen)", data=to_pdf(df_pdf_formatted, st.session_state.ms_selections.get('Mes', [])), file_name='resumen_detallado.pdf', mime='application/pdf', use_container_width=True)
-            # --- FIN: CORRECCIÓN EN LA LLAMADA A to_pdf ---
         
         st.write("")
         if 'page_number' not in st.session_state: st.session_state.page_number = 0
