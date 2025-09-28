@@ -1,0 +1,17 @@
+# ./streamlit/config.toml
+
+[theme]
+# Un azul suave y profesional para los elementos principales.
+primaryColor="#7799ee"
+
+# Un fondo gris muy claro para reducir el cansancio visual.
+backgroundColor="#f0f2f6"
+
+# Blanco puro para las tarjetas y la barra lateral, creando un contraste limpio.
+secondaryBackgroundColor="#ffffff"
+
+# Un color de texto oscuro pero no negro puro para mejor legibilidad.
+textColor="#262730"
+
+# El tipo de fuente.
+font="sans serif"
