@@ -111,14 +111,12 @@ def get_sorted_unique_options(dataframe, column_name):
         unique_values = dataframe[column_name].dropna().unique().tolist()
         unique_values = [v for v in unique_values if v != 'no disponible']
         if column_name == 'Mes':
-            # Create a complete list of months for proper sorting
             all_months_order = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
             return sorted(unique_values, key=lambda m: all_months_order.index(m) if m in all_months_order else -1)
         return sorted(unique_values)
     return []
 
 def get_available_options(df, selections, target_column):
-    """Devuelve las opciones disponibles para un filtro considerando los otros ya aplicados"""
     _df = df.copy()
     for col, values in selections.items():
         if col != target_column and values:
@@ -188,54 +186,19 @@ if 'ms_selections' not in st.session_state:
 
 col_btn1, col_btn2 = st.sidebar.columns(2)
 
-# --- Botón Limpiar Filtros ---
 if col_btn1.button("🧹 Limpiar Filtros", use_container_width=True, key="ms_clear"):
     st.session_state.ms_selections = {col: [] for col in filter_cols}
     st.rerun()
 
-# --- Botón Seleccionar Todo (Lógica Corregida y Acumulativa) ---
 if col_btn2.button("📥 Seleccionar Todo", use_container_width=True, key="ms_load"):
-    # Empezamos con un diccionario de selecciones vacío que llenaremos paso a paso.
     selections_in_progress = {col: [] for col in filter_cols}
-    
-    # Iteramos para construir las selecciones de forma acumulativa.
     for col in filter_cols:
-        # Las opciones disponibles para el filtro actual dependen de las selecciones que YA hicimos en los filtros anteriores.
         available_options = get_available_options(df, selections_in_progress, col)
-        # Actualizamos nuestro diccionario en progreso con TODAS las opciones que encontramos.
         selections_in_progress[col] = available_options
-        
-    # Solo al final, cuando el diccionario está completo y es coherente, lo guardamos en el estado de la sesión.
     st.session_state.ms_selections = selections_in_progress
     st.rerun()
 
 st.sidebar.markdown("---")
-
-old_selections = st.session_state.ms_selections.copy()
-
-# --- Lógica de renderizado de filtros (Slicer) ---
-for col in filter_cols:
-    label = col.replace('_', ' ').replace('Clasificacion Ministerio', 'Clasificación Ministerio')
-
-    available_options = get_available_options(df, st.session_state.ms_selections, col)
-    
-    # Nos aseguramos de que los valores por defecto solo contengan opciones que realmente están disponibles.
-    current_selection = [sel for sel in st.session_state.ms_selections.get(col, []) if sel in available_options]
-
-    selected = st.sidebar.multiselect(
-        label,
-        options=available_options,
-        default=current_selection,  # Usamos la lista ya validada
-        key=f"ms_multiselect_{col}"
-    )
-    st.session_state.ms_selections[col] = selected
-
-# --- Forzar recarga si algo cambió ---
-if old_selections != st.session_state.ms_selections:
-    st.rerun()
-
-# --- Aplicar filtros para el resto de la app ---
-df_filtered = apply_filters(df, st.session_state.ms_selections)
 
 # --- INICIO DEL CUERPO PRINCIPAL DEL DASHBOARD (SIN CAMBIOS) ---
 total_masa_salarial = df_filtered['Total Mensual'].sum()
