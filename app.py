@@ -200,36 +200,36 @@ if col_btn2.button("📥 Seleccionar Todo", use_container_width=True, key="ms_lo
 
 st.sidebar.markdown("---")
 
-# Tomamos una 'foto' del estado ANTES de que el bucle empiece a dibujar y modificar cosas.
+# --- INICIO DE LA CORRECCIÓN ESTRUCTURAL ---
+# 1. Tomamos una 'foto' del estado ANTES de que el bucle empiece. Esta 'foto' será nuestra única fuente de verdad para dibujar TODOS los widgets.
 old_selections = st.session_state.ms_selections.copy()
+# 2. Creamos un diccionario temporal para guardar los valores que nos devuelvan los widgets.
+new_selections = {}
 
-# Este bucle ahora es estable, porque todas las llamadas a 'get_available_options'
-# y las validaciones de 'current_selection' se basan en la misma 'foto' (old_selections).
+# 3. El bucle ahora es estable. Lee de 'old_selections' y escribe en 'new_selections'. No se canibaliza.
 for col in filter_cols:
     label = col.replace('_', ' ').replace('Clasificacion Ministerio', 'Clasificación Ministerio')
 
-    # Usamos la 'foto' para un cálculo consistente.
+    # Usamos la 'foto' para un cálculo consistente de opciones.
     available_options = get_available_options(df, old_selections, col)
     
-    # Validamos la selección actual contra las opciones disponibles usando también la 'foto'.
+    # Validamos la selección por defecto contra las opciones disponibles usando también la 'foto'.
     current_selection = [sel for sel in old_selections.get(col, []) if sel in available_options]
 
-    # El widget se dibuja. El usuario puede cambiar la selección aquí.
+    # Dibujamos el widget y guardamos su valor de retorno en nuestro diccionario temporal.
     selected = st.sidebar.multiselect(
         label,
         options=available_options,
         default=current_selection,
         key=f"ms_multiselect_{col}"
     )
-    
-    # Guardamos el resultado del widget (lo que el usuario haya seleccionado) 
-    # en el estado principal para el próximo ciclo.
-    st.session_state.ms_selections[col] = selected
+    new_selections[col] = selected
 
-
-# Si el estado de las selecciones ha cambiado (por la acción del usuario), recargamos.
-if old_selections != st.session_state.ms_selections:
+# 4. AL FINAL del bucle, comparamos el estado original con el nuevo. Si hay cambios, actualizamos el estado real y recargamos.
+if old_selections != new_selections:
+    st.session_state.ms_selections = new_selections
     st.rerun()
+# --- FIN DE LA CORRECCIÓN ESTRUCTURAL ---
 
 df_filtered = apply_filters(df, st.session_state.ms_selections)
 
@@ -254,7 +254,9 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
+    # El resto del código de visualización no necesita cambios.
     st.subheader("Evolución Mensual de la Masa Salarial")
+    # ... (El resto de tu código permanece idéntico)
     col_chart1, col_table1 = st.columns([2, 1])
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     
