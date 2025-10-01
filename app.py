@@ -73,7 +73,7 @@ def to_excel(df):
     return output.getvalue()
 
 def to_pdf(df, periodo):
-    periodo_str = ", ".join(periodo)
+    periodo_str = ", ".join(periodo) if isinstance(periodo, list) else str(periodo)
     html_table = df.to_html(index=False, border=0)
     html_content = f"""
     <!DOCTYPE html>
@@ -181,33 +181,38 @@ st.sidebar.header('Filtros del Dashboard')
 
 filter_cols = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Mes', 'Ceco', 'Legajo']
 
-# --- INICIALIZACIÓN DE ESTADO ---
-# Se asegura de que el diccionario de selecciones exista. Si no, lo crea vacío.
-if 'ms_selections' not in st.session_state:
-    st.session_state.ms_selections = {col: [] for col in filter_cols}
+# --- LÓGICA DE FILTROS PRINCIPAL ---
 
-# --- BOTÓN DE LIMPIAR FILTROS ---
-if st.sidebar.button("🧹 Limpiar Filtros", use_container_width=True, key="ms_clear"):
-    st.session_state.ms_selections = {col: [] for col in filter_cols}
+# 1. INICIALIZACIÓN DEL ESTADO: Si es la primera vez que se ejecuta, llena todos los filtros.
+if 'ms_selections' not in st.session_state:
+    initial_selections = {col: get_sorted_unique_options(df, col) for col in filter_cols}
+    st.session_state.ms_selections = initial_selections
+    # Forzamos una recarga para que el resto del script vea el estado inicial.
+    st.rerun()
+
+# 2. BOTÓN DE RESETEO: Restablece el estado al inicial (todo seleccionado).
+if st.sidebar.button("🧹 Resetear Filtros", use_container_width=True, key="ms_clear"):
+    initial_selections = {col: get_sorted_unique_options(df, col) for col in filter_cols}
+    st.session_state.ms_selections = initial_selections
     st.rerun()
 
 st.sidebar.markdown("---")
 
-# --- LÓGICA DE FILTROS (SLICERS) - VERSIÓN SIMPLE Y ROBUSTA ---
-# Guardamos una copia del estado ANTES de dibujar los widgets.
-old_selections = st.session_state.ms_selections.copy()
+# 3. LÓGICA DE RENDERIZADO Y ACTUALIZACIÓN (EL "SLICER")
+# Guardamos una copia del estado ANTES de que el usuario interactúe con los widgets.
+old_selections = {k: list(v) for k, v in st.session_state.ms_selections.items()}
 
 # Iteramos para crear cada filtro.
 for col in filter_cols:
     label = col.replace('_', ' ').replace('Clasificacion Ministerio', 'Clasificación Ministerio')
 
-    # Las opciones disponibles para este filtro se calculan basadas en las selecciones de los otros.
+    # Las opciones disponibles se basan en el estado actual de los otros filtros.
     available_options = get_available_options(df, st.session_state.ms_selections, col)
     
-    # Nos aseguramos de que las selecciones por defecto solo contengan opciones que siguen siendo válidas.
+    # Las selecciones por defecto son las que ya están en el estado, siempre que sigan siendo válidas.
     current_selection = [sel for sel in st.session_state.ms_selections.get(col, []) if sel in available_options]
     
-    # Creamos el widget. Streamlit se encarga de gestionar su estado.
+    # Creamos el widget. El usuario puede cambiar su valor.
     selected = st.sidebar.multiselect(
         label,
         options=available_options,
@@ -215,14 +220,14 @@ for col in filter_cols:
         key=f"ms_multiselect_{col}"
     )
     
-    # Actualizamos el diccionario de selecciones con el valor del widget.
+    # Actualizamos el estado de la sesión con el valor que tiene el widget ahora.
     st.session_state.ms_selections[col] = selected
 
-# Si el usuario cambió alguna selección, el diccionario nuevo será diferente al antiguo. En ese caso, recargamos.
+# 4. DETECCIÓN DE CAMBIOS: Si el estado cambió, recargamos la app para que todo se actualice.
 if old_selections != st.session_state.ms_selections:
     st.rerun()
 
-# Finalmente, aplicamos los filtros al DataFrame para el resto de la app.
+# 5. APLICACIÓN DE FILTROS: El DataFrame filtrado se usa en el resto de la app.
 df_filtered = apply_filters(df, st.session_state.ms_selections)
 
 
@@ -247,9 +252,8 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    # El resto de tu código de visualización no necesita cambios.
+    # El resto del código de visualización no necesita cambios.
     st.subheader("Evolución Mensual de la Masa Salarial")
-    # ... (El resto de tu código permanece idéntico)
     col_chart1, col_table1 = st.columns([2, 1])
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
     
