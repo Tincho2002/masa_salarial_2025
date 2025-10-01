@@ -187,45 +187,50 @@ if 'ms_selections' not in st.session_state:
     st.session_state.ms_selections = {col: [] for col in filter_cols}
 
 col_btn1, col_btn2 = st.sidebar.columns(2)
+
+# --- Botón Limpiar Filtros (Lógica Correcta) ---
 if col_btn1.button("🧹 Limpiar Filtros", use_container_width=True, key="ms_clear"):
     st.session_state.ms_selections = {col: [] for col in filter_cols}
     st.rerun()
 
-if col_btn2.button("📥 Cargar Todo", use_container_width=True, key="ms_load"):
-    selections_copy = {col: [] for col in filter_cols}
+# --- Botón Seleccionar Todo (Lógica Corregida) ---
+if col_btn2.button("📥 Seleccionar Todo", use_container_width=True, key="ms_load"):
+    # Usamos una copia de las selecciones actuales para mantener el contexto
+    current_selections = st.session_state.ms_selections.copy()
+    # Iteramos sobre cada filtro para actualizar su selección
     for col in filter_cols:
-        st.session_state.ms_selections[col] = get_available_options(df, selections_copy, col)
+        # Calculamos las opciones disponibles para este filtro, basado en los otros
+        available_options = get_available_options(df, current_selections, col)
+        # Establecemos la selección de este filtro para que sea igual a todas las opciones disponibles
+        st.session_state.ms_selections[col] = available_options
     st.rerun()
 
 st.sidebar.markdown("---")
 
-old_selections = {k: list(v) for k, v in st.session_state.ms_selections.items()}
+old_selections = st.session_state.ms_selections.copy()
 
-# 🔥 Usamos df filtrado parcialmente en cada paso
+# --- Lógica de renderizado de filtros (Slicer) ---
 for col in filter_cols:
-    label = col.replace('_', ' ')
-    if col == 'Clasificacion_Ministerio':
-        label = 'Clasificación Ministerio'
+    label = col.replace('_', ' ').replace('Clasificacion Ministerio', 'Clasificación Ministerio')
 
     available_options = get_available_options(df, st.session_state.ms_selections, col)
-
-    # mantener solo los seleccionados que siguen estando disponibles
-    current_selection = [sel for sel in st.session_state.ms_selections.get(col, []) if sel in available_options]
-
+    
     selected = st.sidebar.multiselect(
         label,
         options=available_options,
-        default=current_selection,
+        default=st.session_state.ms_selections.get(col, []), # Simplificado: multiselect maneja bien los defaults
         key=f"ms_multiselect_{col}"
     )
     st.session_state.ms_selections[col] = selected
 
-# 🚀 Fuerza recarga cuando cambia algo
+# --- Forzar recarga si algo cambió ---
 if old_selections != st.session_state.ms_selections:
     st.rerun()
 
+# --- Aplicar filtros para el resto de la app ---
 df_filtered = apply_filters(df, st.session_state.ms_selections)
 
+# --- INICIO DEL CUERPO PRINCIPAL DEL DASHBOARD (SIN CAMBIOS) ---
 total_masa_salarial = df_filtered['Total Mensual'].sum()
 cantidad_empleados = 0
 latest_month_name = "N/A"
@@ -602,5 +607,3 @@ else:
             st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
         with col_dl_12:
             st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
-
-
