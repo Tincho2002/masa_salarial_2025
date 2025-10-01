@@ -111,6 +111,7 @@ def get_sorted_unique_options(dataframe, column_name):
         unique_values = dataframe[column_name].dropna().unique().tolist()
         unique_values = [v for v in unique_values if v != 'no disponible']
         if column_name == 'Mes':
+            # Create a complete list of months for proper sorting
             all_months_order = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
             return sorted(unique_values, key=lambda m: all_months_order.index(m) if m in all_months_order else -1)
         return sorted(unique_values)
