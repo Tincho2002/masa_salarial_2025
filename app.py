@@ -118,6 +118,7 @@ def get_sorted_unique_options(dataframe, column_name):
     return []
 
 def get_available_options(df, selections, target_column):
+    """Devuelve las opciones disponibles para un filtro considerando los otros ya aplicados"""
     _df = df.copy()
     for col, values in selections.items():
         if col != target_column and values:
@@ -200,12 +201,15 @@ st.sidebar.markdown("---")
 
 old_selections = {k: list(v) for k, v in st.session_state.ms_selections.items()}
 
+# 🔥 Usamos df filtrado parcialmente en cada paso
 for col in filter_cols:
     label = col.replace('_', ' ')
     if col == 'Clasificacion_Ministerio':
         label = 'Clasificación Ministerio'
-    
+
     available_options = get_available_options(df, st.session_state.ms_selections, col)
+
+    # mantener solo los seleccionados que siguen estando disponibles
     current_selection = [sel for sel in st.session_state.ms_selections.get(col, []) if sel in available_options]
 
     selected = st.sidebar.multiselect(
@@ -216,9 +220,9 @@ for col in filter_cols:
     )
     st.session_state.ms_selections[col] = selected
 
+# 🚀 Fuerza recarga cuando cambia algo
 if old_selections != st.session_state.ms_selections:
     st.rerun()
-
 
 df_filtered = apply_filters(df, st.session_state.ms_selections)
 
@@ -598,4 +602,5 @@ else:
             st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
         with col_dl_12:
             st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+
 
