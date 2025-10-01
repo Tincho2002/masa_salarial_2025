@@ -200,7 +200,40 @@ if col_btn2.button("📥 Seleccionar Todo", use_container_width=True, key="ms_lo
 
 st.sidebar.markdown("---")
 
-# --- INICIO DEL CUERPO PRINCIPAL DEL DASHBOARD (SIN CAMBIOS) ---
+# Tomamos una 'foto' del estado ANTES de que el bucle empiece a dibujar y modificar cosas.
+old_selections = st.session_state.ms_selections.copy()
+
+# Este bucle ahora es estable, porque todas las llamadas a 'get_available_options'
+# y las validaciones de 'current_selection' se basan en la misma 'foto' (old_selections).
+for col in filter_cols:
+    label = col.replace('_', ' ').replace('Clasificacion Ministerio', 'Clasificación Ministerio')
+
+    # Usamos la 'foto' para un cálculo consistente.
+    available_options = get_available_options(df, old_selections, col)
+    
+    # Validamos la selección actual contra las opciones disponibles usando también la 'foto'.
+    current_selection = [sel for sel in old_selections.get(col, []) if sel in available_options]
+
+    # El widget se dibuja. El usuario puede cambiar la selección aquí.
+    selected = st.sidebar.multiselect(
+        label,
+        options=available_options,
+        default=current_selection,
+        key=f"ms_multiselect_{col}"
+    )
+    
+    # Guardamos el resultado del widget (lo que el usuario haya seleccionado) 
+    # en el estado principal para el próximo ciclo.
+    st.session_state.ms_selections[col] = selected
+
+
+# Si el estado de las selecciones ha cambiado (por la acción del usuario), recargamos.
+if old_selections != st.session_state.ms_selections:
+    st.rerun()
+
+df_filtered = apply_filters(df, st.session_state.ms_selections)
+
+# --- INICIO DEL CUERPO PRINCIPAL DEL DASHBOARD ---
 total_masa_salarial = df_filtered['Total Mensual'].sum()
 cantidad_empleados = 0
 latest_month_name = "N/A"
