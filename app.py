@@ -103,6 +103,24 @@ def apply_filters(df, selections):
         if values:
             _df = _df[_df[col].isin(values)]
     return _df
+    
+# --- INICIO: FUNCIONES PARA FILTROS INTELIGENTES ---
+def get_sorted_unique_options(dataframe, column_name):
+    if column_name in dataframe.columns:
+        unique_values = dataframe[column_name].dropna().unique().tolist()
+        unique_values = [v for v in unique_values if v != 'no disponible']
+        if column_name == 'Mes':
+            return sorted(unique_values, key=lambda m: list(dataframe.sort_values('Mes_Num')['Mes'].unique()).index(m))
+        return sorted(unique_values)
+    return []
+
+def get_available_options(df, selections, target_column):
+    _df = df.copy()
+    for col, values in selections.items():
+        if col != target_column and values:
+            _df = _df[_df[col].isin(values)]
+    return get_sorted_unique_options(_df, target_column)
+# --- FIN: FUNCIONES PARA FILTROS INTELIGENTES ---
 
 # --- CARGA DE DATOS ---
 @st.cache_data
@@ -132,10 +150,10 @@ def load_data(uploaded_file):
          df['Nro. de Legajo'] = pd.to_numeric(df['Nro. de Legajo'], errors='coerce').astype('Int64')
     df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
     key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
-    df.dropna(subset=key_filter_columns, inplace=True)
+    # No eliminar filas con nulos aquí, la lógica de filtros se encarga de los vacíos
     for col in key_filter_columns:
         if col in df.columns:
-            df[col] = df[col].astype(str).str.strip()
+            df[col] = df[col].astype(str).str.strip().replace(['', 'None', 'nan'], 'no disponible')
     df.reset_index(drop=True, inplace=True)
     return df
 
@@ -169,31 +187,36 @@ if col_btn1.button("🧹 Limpiar Filtros", use_container_width=True, key="ms_cle
     st.rerun()
 
 if col_btn2.button("📥 Cargar Todo", use_container_width=True, key="ms_load"):
+    selections_copy = {col: [] for col in filter_cols}
     for col in filter_cols:
-        if col == 'Mes':
-            options = df.sort_values('Mes_Num')['Mes'].unique().tolist()
-        else:
-            options = sorted(df[col].unique())
-        st.session_state.ms_selections[col] = options
+        st.session_state.ms_selections[col] = get_available_options(df, selections_copy, col)
     st.rerun()
 
 st.sidebar.markdown("---")
+
+# --- INICIO: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
+old_selections = st.session_state.ms_selections.copy()
 
 for col in filter_cols:
     label = col.replace('_', ' ')
     if col == 'Clasificacion_Ministerio':
         label = 'Clasificación Ministerio'
     
-    if col == 'Mes':
-        options = df.sort_values('Mes_Num')['Mes'].unique().tolist()
-    else:
-        options = sorted(df[col].unique())
-    
-    st.session_state.ms_selections[col] = st.sidebar.multiselect(
+    available_options = get_available_options(df, st.session_state.ms_selections, col)
+    current_selection = [sel for sel in st.session_state.ms_selections.get(col, []) if sel in available_options]
+
+    selected = st.sidebar.multiselect(
         label,
-        options=options,
-        default=st.session_state.ms_selections.get(col, [])
+        options=available_options,
+        default=current_selection,
+        key=f"ms_multiselect_{col}"
     )
+    st.session_state.ms_selections[col] = selected
+
+if old_selections != st.session_state.ms_selections:
+    st.rerun()
+# --- FIN: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
+
 
 df_filtered = apply_filters(df, st.session_state.ms_selections)
 
@@ -577,3 +600,4 @@ else:
             st.download_button(label="📥 Descargar CSV", data=summary_df_display.to_csv(index=False).encode('utf-8'), file_name='resumen_anual_filtrado.csv', mime='text/csv', use_container_width=True)
         with col_dl_12:
             st.download_button(label="📥 Descargar Excel", data=to_excel(summary_df_display), file_name='resumen_anual_filtrado.xlsx', mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', use_container_width=True)
+
