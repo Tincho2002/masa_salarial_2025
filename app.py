@@ -145,18 +145,21 @@ def load_data(uploaded_file):
     df['Mes_Num'] = df['Período'].dt.month.astype(int)
     meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
     df['Mes'] = df['Mes_Num'].map(meses_es)
-    if 'Ceco' in df.columns:
-        df['Ceco'] = pd.to_numeric(df['Ceco'], errors='coerce').astype('Int64')
-    if 'Dotación' in df.columns:
-        df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
-    if 'Nro. de Legajo' in df.columns:
-         df['Nro. de Legajo'] = pd.to_numeric(df['Nro. de Legajo'], errors='coerce').astype('Int64')
-    df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio'}, inplace=True)
-    key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación']
-    # No eliminar filas con nulos aquí, la lógica de filtros se encarga de los vacíos
+    
+    # Limpieza de columnas clave
+    df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio', 'Nro. de Legajo': 'Legajo'}, inplace=True)
+    key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Ceco', 'Legajo']
     for col in key_filter_columns:
         if col in df.columns:
-            df[col] = df[col].astype(str).str.strip().replace(['', 'None', 'nan'], 'no disponible')
+            df[col] = df[col].astype(str).str.strip().replace(['', 'None', 'nan', 'nan.0', '0'], 'no disponible')
+        else:
+            df[col] = 'no disponible'
+
+    if 'Dotación' in df.columns:
+        df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
+
+    # Restaurar el dropna para asegurar integridad en filtros clave
+    df.dropna(subset=['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación'], inplace=True)
     df.reset_index(drop=True, inplace=True)
     return df
 
@@ -179,7 +182,7 @@ if df.empty:
     
 st.sidebar.header('Filtros del Dashboard')
 
-filter_cols = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Mes']
+filter_cols = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Mes', 'Ceco', 'Legajo']
 
 if 'ms_selections' not in st.session_state:
     st.session_state.ms_selections = {col: [] for col in filter_cols}
@@ -198,7 +201,6 @@ if col_btn2.button("📥 Cargar Todo", use_container_width=True, key="ms_load"):
 st.sidebar.markdown("---")
 
 # --- INICIO: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
-# Almacena una copia de las selecciones antes de que los widgets se redibujen
 old_selections = {k: list(v) for k, v in st.session_state.ms_selections.items()}
 
 for col in filter_cols:
@@ -217,11 +219,9 @@ for col in filter_cols:
     )
     st.session_state.ms_selections[col] = selected
 
-# Comprueba si alguna selección ha cambiado después de que todos los widgets se hayan dibujado
 if old_selections != st.session_state.ms_selections:
     st.rerun()
 # --- FIN: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
-
 
 df_filtered = apply_filters(df, st.session_state.ms_selections)
 
@@ -298,21 +298,15 @@ else:
     gerencia_data = df_filtered.groupby('Gerencia')['Total Mensual'].sum().sort_values(ascending=False).reset_index()
     chart_height2 = (len(gerencia_data) + 1) * 35 + 3
     with col_chart2:
-        base_chart2 = alt.Chart(gerencia_data).transform_window(
-            total_sum='sum(Total Mensual)'
-        ).transform_calculate(
-            percentage="datum['Total Mensual'] / datum.total_sum",
-            label_text="format(datum['Total Mensual'] / 1000000000, ',.2f') + 'G (' + format(datum.percentage, '.1%') + ')'"
-        )
-        bar = base_chart2.mark_bar().encode(
+        base_chart2 = alt.Chart(gerencia_data).mark_bar().encode(
             x=alt.X('Total Mensual:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
             y=alt.Y('Gerencia:N', sort='-x', title=None, axis=alt.Axis(labelLimit=120)),
             tooltip=[alt.Tooltip('Gerencia:N', title='Gerencia'), alt.Tooltip('Total Mensual:Q', format='$,.2f')]
         )
         text = base_chart2.mark_text(align='left', baseline='middle', dx=5).encode(
-            x='Total Mensual:Q', y=alt.Y('Gerencia:N', sort='-x'), text='label_text:N', color=alt.value('black')
+            x='Total Mensual:Q', y=alt.Y('Gerencia:N', sort='-x'), text=alt.Text('Total Mensual:Q', format='$,.0s'), color=alt.value('black')
         )
-        bar_chart = (bar + text).properties(height=chart_height2, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+        bar_chart = (base_chart2 + text).properties(height=chart_height2, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
         st.altair_chart(bar_chart, use_container_width=True)
     with col_table2:
         gerencia_data_display = gerencia_data.copy()
@@ -415,7 +409,6 @@ else:
                 y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
                 tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
             )
-            # --- CORRECCIÓN: ETIQUETAS DE DATOS RESTAURADAS ---
             text_labels_concepto = base_chart_concepto.mark_text(align='left', baseline='middle', dx=3).encode(text=alt.Text('Total general:Q', format='$,.0s'))
             bar_chart_concepto = (base_chart_concepto + text_labels_concepto).properties(height=chart_height_concepto, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
             st.altair_chart(bar_chart_concepto, use_container_width=True)
@@ -451,7 +444,6 @@ else:
         pivot_table_sipaf = pd.pivot_table(df_melted_sipaf, values='Monto', index='Concepto', columns='Mes', aggfunc='sum', fill_value=0)
         meses_en_datos_sipaf = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
         
-        # --- CORRECCIÓN: Evitar el error de 'all' con un array vacío ---
         if meses_en_datos_sipaf and all(mes in pivot_table_sipaf.columns for mes in meses_en_datos_sipaf):
             pivot_table_sipaf = pivot_table_sipaf[meses_en_datos_sipaf]
             
@@ -475,7 +467,6 @@ else:
                 y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
                 tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
             )
-            # --- CORRECCIÓN: ETIQUETAS DE DATOS RESTAURADAS ---
             text_labels_sipaf = base_chart_sipaf.mark_text(align='left', baseline='middle', dx=3).encode(text=alt.Text('Total general:Q', format='$,.0s'))
             bar_chart_sipaf = (base_chart_sipaf + text_labels_sipaf).properties(height=chart_height_sipaf, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
             st.altair_chart(bar_chart_sipaf, use_container_width=True)
