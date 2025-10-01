@@ -181,59 +181,52 @@ st.sidebar.header('Filtros del Dashboard')
 
 filter_cols = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Mes', 'Ceco', 'Legajo']
 
+# --- INICIALIZACIÓN DE ESTADO ---
+# Se asegura de que el diccionario de selecciones exista. Si no, lo crea vacío.
 if 'ms_selections' not in st.session_state:
     st.session_state.ms_selections = {col: [] for col in filter_cols}
 
-col_btn1, col_btn2 = st.sidebar.columns(2)
-
-if col_btn1.button("🧹 Limpiar Filtros", use_container_width=True, key="ms_clear"):
+# --- BOTÓN DE LIMPIAR FILTROS ---
+if st.sidebar.button("🧹 Limpiar Filtros", use_container_width=True, key="ms_clear"):
     st.session_state.ms_selections = {col: [] for col in filter_cols}
-    st.rerun()
-
-if col_btn2.button("📥 Seleccionar Todo", use_container_width=True, key="ms_load"):
-    selections_in_progress = {col: [] for col in filter_cols}
-    for col in filter_cols:
-        available_options = get_available_options(df, selections_in_progress, col)
-        selections_in_progress[col] = available_options
-    st.session_state.ms_selections = selections_in_progress
     st.rerun()
 
 st.sidebar.markdown("---")
 
-# --- INICIO DE LA CORRECCIÓN ESTRUCTURAL ---
-# 1. Tomamos una 'foto' del estado ANTES de que el bucle empiece. Esta 'foto' será nuestra única fuente de verdad para dibujar TODOS los widgets.
+# --- LÓGICA DE FILTROS (SLICERS) - VERSIÓN SIMPLE Y ROBUSTA ---
+# Guardamos una copia del estado ANTES de dibujar los widgets.
 old_selections = st.session_state.ms_selections.copy()
-# 2. Creamos un diccionario temporal para guardar los valores que nos devuelvan los widgets.
-new_selections = {}
 
-# 3. El bucle ahora es estable. Lee de 'old_selections' y escribe en 'new_selections'. No se canibaliza.
+# Iteramos para crear cada filtro.
 for col in filter_cols:
     label = col.replace('_', ' ').replace('Clasificacion Ministerio', 'Clasificación Ministerio')
 
-    # Usamos la 'foto' para un cálculo consistente de opciones.
-    available_options = get_available_options(df, old_selections, col)
+    # Las opciones disponibles para este filtro se calculan basadas en las selecciones de los otros.
+    available_options = get_available_options(df, st.session_state.ms_selections, col)
     
-    # Validamos la selección por defecto contra las opciones disponibles usando también la 'foto'.
-    current_selection = [sel for sel in old_selections.get(col, []) if sel in available_options]
-
-    # Dibujamos el widget y guardamos su valor de retorno en nuestro diccionario temporal.
+    # Nos aseguramos de que las selecciones por defecto solo contengan opciones que siguen siendo válidas.
+    current_selection = [sel for sel in st.session_state.ms_selections.get(col, []) if sel in available_options]
+    
+    # Creamos el widget. Streamlit se encarga de gestionar su estado.
     selected = st.sidebar.multiselect(
         label,
         options=available_options,
         default=current_selection,
         key=f"ms_multiselect_{col}"
     )
-    new_selections[col] = selected
+    
+    # Actualizamos el diccionario de selecciones con el valor del widget.
+    st.session_state.ms_selections[col] = selected
 
-# 4. AL FINAL del bucle, comparamos el estado original con el nuevo. Si hay cambios, actualizamos el estado real y recargamos.
-if old_selections != new_selections:
-    st.session_state.ms_selections = new_selections
+# Si el usuario cambió alguna selección, el diccionario nuevo será diferente al antiguo. En ese caso, recargamos.
+if old_selections != st.session_state.ms_selections:
     st.rerun()
-# --- FIN DE LA CORRECCIÓN ESTRUCTURAL ---
 
+# Finalmente, aplicamos los filtros al DataFrame para el resto de la app.
 df_filtered = apply_filters(df, st.session_state.ms_selections)
 
-# --- INICIO DEL CUERPO PRINCIPAL DEL DASHBOARD ---
+
+# --- INICIO DEL CUERPO PRINCIPAL DEL DASHBOARD (SIN CAMBIOS) ---
 total_masa_salarial = df_filtered['Total Mensual'].sum()
 cantidad_empleados = 0
 latest_month_name = "N/A"
@@ -254,7 +247,7 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    # El resto del código de visualización no necesita cambios.
+    # El resto de tu código de visualización no necesita cambios.
     st.subheader("Evolución Mensual de la Masa Salarial")
     # ... (El resto de tu código permanece idéntico)
     col_chart1, col_table1 = st.columns([2, 1])
