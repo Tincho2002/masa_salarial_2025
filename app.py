@@ -111,7 +111,6 @@ def get_sorted_unique_options(dataframe, column_name):
         unique_values = dataframe[column_name].dropna().unique().tolist()
         unique_values = [v for v in unique_values if v != 'no disponible']
         if column_name == 'Mes':
-            # Create a complete list of months for proper sorting
             all_months_order = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
             return sorted(unique_values, key=lambda m: all_months_order.index(m) if m in all_months_order else -1)
         return sorted(unique_values)
@@ -146,13 +145,11 @@ def load_data(uploaded_file):
     meses_es = {1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'}
     df['Mes'] = df['Mes_Num'].map(meses_es)
     
-    # Limpieza de columnas clave
     df.rename(columns={'Clasificación Ministerio de Hacienda': 'Clasificacion_Ministerio', 'Nro. de Legajo': 'Legajo'}, inplace=True)
     key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Ceco', 'Legajo']
     for col in key_filter_columns:
         if col in df.columns:
             if col in ['Ceco', 'Legajo']:
-                # Convert to numeric, then to Int64 (to handle NaN), then to string to remove '.0'
                 df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64').astype(str).replace('<NA>', 'no disponible')
             df[col] = df[col].astype(str).str.strip().replace(['', 'None', 'nan', 'nan.0', '0'], 'no disponible')
         else:
@@ -168,7 +165,6 @@ def load_data(uploaded_file):
 st.title('📊 Dashboard de Masa Salarial 2025')
 st.markdown("Análisis interactivo de los costos de la mano de obra de la compañía.")
 
-# --- INICIO: LÓGICA DE CARGA DE ARCHIVO ---
 uploaded_file = st.file_uploader("📂 Cargue aquí su archivo Excel de Masa Salarial", type=["xlsx"])
 
 if uploaded_file is None:
@@ -176,7 +172,6 @@ if uploaded_file is None:
     st.stop()
 
 df = load_data(uploaded_file)
-# --- FIN: LÓGICA DE CARGA DE ARCHIVO ---
 
 if df.empty:
     st.error("El archivo cargado está vacío o no se pudo procesar. El dashboard no puede continuar.")
@@ -202,8 +197,6 @@ if col_btn2.button("📥 Cargar Todo", use_container_width=True, key="ms_load"):
 
 st.sidebar.markdown("---")
 
-# --- INICIO: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
-# Almacena una copia de las selecciones antes de que los widgets se redibujen
 old_selections = {k: list(v) for k, v in st.session_state.ms_selections.items()}
 
 for col in filter_cols:
@@ -224,7 +217,6 @@ for col in filter_cols:
 
 if old_selections != st.session_state.ms_selections:
     st.rerun()
-# --- FIN: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
 
 
 df_filtered = apply_filters(df, st.session_state.ms_selections)
@@ -249,7 +241,6 @@ st.markdown("---")
 if df_filtered.empty:
     st.warning("No hay datos que coincidan con los filtros seleccionados.")
 else:
-    # (El resto del código del dashboard sigue aquí, sin cambios)
     st.subheader("Evolución Mensual de la Masa Salarial")
     col_chart1, col_table1 = st.columns([2, 1])
     masa_mensual = df_filtered.groupby('Mes').agg({'Total Mensual': 'sum', 'Mes_Num': 'first'}).reset_index().sort_values('Mes_Num')
