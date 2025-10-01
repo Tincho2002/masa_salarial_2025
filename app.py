@@ -410,11 +410,14 @@ else:
             
             chart_height_concepto = (len(chart_data_concepto) + 1) * 35 + 3
             
-            bar_chart_concepto = alt.Chart(chart_data_concepto).mark_bar().encode(
+            base_chart_concepto = alt.Chart(chart_data_concepto).mark_bar().encode(
                 x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
                 tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
-            ).properties(height=chart_height_concepto, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+            )
+            # --- CORRECCIÓN: ETIQUETAS DE DATOS RESTAURADAS ---
+            text_labels_concepto = base_chart_concepto.mark_text(align='left', baseline='middle', dx=3).encode(text=alt.Text('Total general:Q', format='$,.0s'))
+            bar_chart_concepto = (base_chart_concepto + text_labels_concepto).properties(height=chart_height_concepto, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
             st.altair_chart(bar_chart_concepto, use_container_width=True)
 
         with col_table_concepto:
@@ -447,11 +450,11 @@ else:
         df_melted_sipaf = df_filtered.melt(id_vars=['Mes', 'Mes_Num'], value_vars=sipaf_cols_present, var_name='Concepto', value_name='Monto')
         pivot_table_sipaf = pd.pivot_table(df_melted_sipaf, values='Monto', index='Concepto', columns='Mes', aggfunc='sum', fill_value=0)
         meses_en_datos_sipaf = df_filtered[['Mes', 'Mes_Num']].drop_duplicates().sort_values('Mes_Num')['Mes'].tolist()
-        for mes in meses_en_datos_sipaf:
-            if mes not in pivot_table_sipaf.columns:
-                pivot_table_sipaf[mes] = 0
-        if all(mes in pivot_table_sipaf.columns for mes in meses_en_datos_sipaf):
+        
+        # --- CORRECCIÓN: Evitar el error de 'all' con un array vacío ---
+        if meses_en_datos_sipaf and all(mes in pivot_table_sipaf.columns for mes in meses_en_datos_sipaf):
             pivot_table_sipaf = pivot_table_sipaf[meses_en_datos_sipaf]
+            
         pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
         pivot_table_sipaf = pivot_table_sipaf.dropna(how='all')
         if not pivot_table_sipaf.empty:
@@ -467,11 +470,14 @@ else:
             
             chart_height_sipaf = (len(chart_data_sipaf) + 1) * 35 + 3
 
-            bar_chart_sipaf = alt.Chart(chart_data_sipaf).mark_bar().encode(
+            base_chart_sipaf = alt.Chart(chart_data_sipaf).mark_bar().encode(
                 x=alt.X('Total general:Q', title='Masa Salarial ($)', axis=alt.Axis(format='$,.0s')),
                 y=alt.Y('Concepto:N', sort='-x', title=None, axis=alt.Axis(labelLimit=200)),
                 tooltip=[alt.Tooltip('Concepto:N'), alt.Tooltip('Total general:Q', format='$,.2f', title='Total')]
-            ).properties(height=chart_height_sipaf, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
+            )
+            # --- CORRECCIÓN: ETIQUETAS DE DATOS RESTAURADAS ---
+            text_labels_sipaf = base_chart_sipaf.mark_text(align='left', baseline='middle', dx=3).encode(text=alt.Text('Total general:Q', format='$,.0s'))
+            bar_chart_sipaf = (base_chart_sipaf + text_labels_sipaf).properties(height=chart_height_sipaf, padding={'top': 25, 'left': 5, 'right': 5, 'bottom': 5}).configure(background='transparent').configure_view(fill='transparent')
             st.altair_chart(bar_chart_sipaf, use_container_width=True)
 
         with col_table_sipaf:
