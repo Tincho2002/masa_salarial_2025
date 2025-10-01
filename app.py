@@ -112,8 +112,8 @@ def get_sorted_unique_options(dataframe, column_name):
         unique_values = [v for v in unique_values if v != 'no disponible']
         if column_name == 'Mes':
             # Create a complete list of months for proper sorting
-            all_months = list(dataframe.sort_values('Mes_Num')['Mes'].unique())
-            return sorted(unique_values, key=lambda m: all_months.index(m) if m in all_months else -1)
+            all_months_order = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+            return sorted(unique_values, key=lambda m: all_months_order.index(m) if m in all_months_order else -1)
         return sorted(unique_values)
     return []
 
@@ -151,6 +151,9 @@ def load_data(uploaded_file):
     key_filter_columns = ['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación', 'Ceco', 'Legajo']
     for col in key_filter_columns:
         if col in df.columns:
+            if col in ['Ceco', 'Legajo']:
+                # Convert to numeric, then to Int64 (to handle NaN), then to string to remove '.0'
+                df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64').astype(str).replace('<NA>', 'no disponible')
             df[col] = df[col].astype(str).str.strip().replace(['', 'None', 'nan', 'nan.0', '0'], 'no disponible')
         else:
             df[col] = 'no disponible'
@@ -158,7 +161,6 @@ def load_data(uploaded_file):
     if 'Dotación' in df.columns:
         df['Dotación'] = pd.to_numeric(df['Dotación'], errors='coerce').fillna(0).astype(int)
 
-    # Restaurar el dropna para asegurar integridad en filtros clave
     df.dropna(subset=['Gerencia', 'Nivel', 'Clasificacion_Ministerio', 'Relación'], inplace=True)
     df.reset_index(drop=True, inplace=True)
     return df
