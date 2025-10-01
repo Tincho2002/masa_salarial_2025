@@ -188,17 +188,25 @@ if 'ms_selections' not in st.session_state:
 
 col_btn1, col_btn2 = st.sidebar.columns(2)
 
-# --- Botón Limpiar Filtros (Lógica Correcta) ---
+# --- Botón Limpiar Filtros ---
 if col_btn1.button("🧹 Limpiar Filtros", use_container_width=True, key="ms_clear"):
     st.session_state.ms_selections = {col: [] for col in filter_cols}
     st.rerun()
 
-# --- Botón Seleccionar Todo (Lógica Correcta) ---
+# --- Botón Seleccionar Todo (Lógica Corregida y Acumulativa) ---
 if col_btn2.button("📥 Seleccionar Todo", use_container_width=True, key="ms_load"):
-    current_selections = st.session_state.ms_selections.copy()
+    # Empezamos con un diccionario de selecciones vacío que llenaremos paso a paso.
+    selections_in_progress = {col: [] for col in filter_cols}
+    
+    # Iteramos para construir las selecciones de forma acumulativa.
     for col in filter_cols:
-        available_options = get_available_options(df, current_selections, col)
-        st.session_state.ms_selections[col] = available_options
+        # Las opciones disponibles para el filtro actual dependen de las selecciones que YA hicimos en los filtros anteriores.
+        available_options = get_available_options(df, selections_in_progress, col)
+        # Actualizamos nuestro diccionario en progreso con TODAS las opciones que encontramos.
+        selections_in_progress[col] = available_options
+        
+    # Solo al final, cuando el diccionario está completo y es coherente, lo guardamos en el estado de la sesión.
+    st.session_state.ms_selections = selections_in_progress
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -212,7 +220,6 @@ for col in filter_cols:
     available_options = get_available_options(df, st.session_state.ms_selections, col)
     
     # Nos aseguramos de que los valores por defecto solo contengan opciones que realmente están disponibles.
-    # Esta es la validación clave que previene el error.
     current_selection = [sel for sel in st.session_state.ms_selections.get(col, []) if sel in available_options]
 
     selected = st.sidebar.multiselect(
