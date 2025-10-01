@@ -193,15 +193,11 @@ if col_btn1.button("🧹 Limpiar Filtros", use_container_width=True, key="ms_cle
     st.session_state.ms_selections = {col: [] for col in filter_cols}
     st.rerun()
 
-# --- Botón Seleccionar Todo (Lógica Corregida) ---
+# --- Botón Seleccionar Todo (Lógica Correcta) ---
 if col_btn2.button("📥 Seleccionar Todo", use_container_width=True, key="ms_load"):
-    # Usamos una copia de las selecciones actuales para mantener el contexto
     current_selections = st.session_state.ms_selections.copy()
-    # Iteramos sobre cada filtro para actualizar su selección
     for col in filter_cols:
-        # Calculamos las opciones disponibles para este filtro, basado en los otros
         available_options = get_available_options(df, current_selections, col)
-        # Establecemos la selección de este filtro para que sea igual a todas las opciones disponibles
         st.session_state.ms_selections[col] = available_options
     st.rerun()
 
@@ -215,10 +211,14 @@ for col in filter_cols:
 
     available_options = get_available_options(df, st.session_state.ms_selections, col)
     
+    # Nos aseguramos de que los valores por defecto solo contengan opciones que realmente están disponibles.
+    # Esta es la validación clave que previene el error.
+    current_selection = [sel for sel in st.session_state.ms_selections.get(col, []) if sel in available_options]
+
     selected = st.sidebar.multiselect(
         label,
         options=available_options,
-        default=st.session_state.ms_selections.get(col, []), # Simplificado: multiselect maneja bien los defaults
+        default=current_selection,  # Usamos la lista ya validada
         key=f"ms_multiselect_{col}"
     )
     st.session_state.ms_selections[col] = selected
