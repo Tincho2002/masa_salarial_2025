@@ -111,7 +111,9 @@ def get_sorted_unique_options(dataframe, column_name):
         unique_values = dataframe[column_name].dropna().unique().tolist()
         unique_values = [v for v in unique_values if v != 'no disponible']
         if column_name == 'Mes':
-            return sorted(unique_values, key=lambda m: list(dataframe.sort_values('Mes_Num')['Mes'].unique()).index(m))
+            # Create a complete list of months for proper sorting
+            all_months = list(dataframe.sort_values('Mes_Num')['Mes'].unique())
+            return sorted(unique_values, key=lambda m: all_months.index(m) if m in all_months else -1)
         return sorted(unique_values)
     return []
 
@@ -196,6 +198,7 @@ if col_btn2.button("📥 Cargar Todo", use_container_width=True, key="ms_load"):
 st.sidebar.markdown("---")
 
 # --- INICIO: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
+# Almacena una copia de las selecciones antes de que los widgets se redibujen
 old_selections = st.session_state.ms_selections.copy()
 
 for col in filter_cols:
