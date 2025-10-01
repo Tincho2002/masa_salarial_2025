@@ -199,7 +199,7 @@ st.sidebar.markdown("---")
 
 # --- INICIO: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
 # Almacena una copia de las selecciones antes de que los widgets se redibujen
-old_selections = st.session_state.ms_selections.copy()
+old_selections = {k: list(v) for k, v in st.session_state.ms_selections.items()}
 
 for col in filter_cols:
     label = col.replace('_', ' ')
@@ -217,6 +217,7 @@ for col in filter_cols:
     )
     st.session_state.ms_selections[col] = selected
 
+# Comprueba si alguna selección ha cambiado después de que todos los widgets se hayan dibujado
 if old_selections != st.session_state.ms_selections:
     st.rerun()
 # --- FIN: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
@@ -449,7 +450,7 @@ else:
         for mes in meses_en_datos_sipaf:
             if mes not in pivot_table_sipaf.columns:
                 pivot_table_sipaf[mes] = 0
-        if all(mes in meses_en_datos_sipaf):
+        if all(mes in pivot_table_sipaf.columns for mes in meses_en_datos_sipaf):
             pivot_table_sipaf = pivot_table_sipaf[meses_en_datos_sipaf]
         pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
         pivot_table_sipaf = pivot_table_sipaf.dropna(how='all')
