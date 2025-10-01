@@ -4,6 +4,7 @@ import altair as alt
 from io import BytesIO
 from fpdf import FPDF
 import numpy as np
+from datetime import datetime
 
 # --- Configuración de la página ---
 st.set_page_config(layout="wide")
@@ -445,7 +446,7 @@ else:
         for mes in meses_en_datos_sipaf:
             if mes not in pivot_table_sipaf.columns:
                 pivot_table_sipaf[mes] = 0
-        if all(mes in pivot_table_sipaf.columns for mes in meses_en_datos_sipaf):
+        if all(mes in meses_en_datos_sipaf):
             pivot_table_sipaf = pivot_table_sipaf[meses_en_datos_sipaf]
         pivot_table_sipaf['Total general'] = pivot_table_sipaf.sum(axis=1)
         pivot_table_sipaf = pivot_table_sipaf.dropna(how='all')
