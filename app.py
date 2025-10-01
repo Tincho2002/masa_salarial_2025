@@ -201,6 +201,7 @@ if col_btn2.button("📥 Cargar Todo", use_container_width=True, key="ms_load"):
 st.sidebar.markdown("---")
 
 # --- INICIO: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
+# Almacena una copia de las selecciones antes de que los widgets se redibujen
 old_selections = {k: list(v) for k, v in st.session_state.ms_selections.items()}
 
 for col in filter_cols:
@@ -222,6 +223,7 @@ for col in filter_cols:
 if old_selections != st.session_state.ms_selections:
     st.rerun()
 # --- FIN: BUCLE DE FILTROS INTELIGENTES (CORREGIDO) ---
+
 
 df_filtered = apply_filters(df, st.session_state.ms_selections)
 
